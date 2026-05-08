@@ -35,6 +35,19 @@ namespace HyperionScreenCap.Helper
                 // Screen capture already initialized. Ignoring request.
                 return;
             }
+
+            // If DX11 device is invalid (RecreateD3DDevice failed), dispose and force fresh reinit
+            if ( _screenCapture != null )
+            {
+                var dx11 = _screenCapture as DX11ScreenCapture;
+                if ( dx11 != null && dx11.IsDeviceInvalid() )
+                {
+                    LOG.Info($"{this}: DX11 device invalid, disposing for full reinit");
+                    _screenCapture.Dispose();
+                    _screenCapture = null;
+                }
+            }
+
             try
             {
                 LOG.Info($"{this}: Initializing screen capture");
@@ -156,6 +169,7 @@ namespace HyperionScreenCap.Helper
             InstantiateScreenCapture();
             InstantiateHyperionClients();
             int captureAttempt = 1;
+            int backoffMillis = AppConstants.CAPTURE_FAILED_COOLDOWN_MILLIS;
             while ( CaptureEnabled )
             {
                 try // This block will help retry capture before giving up
@@ -165,6 +179,7 @@ namespace HyperionScreenCap.Helper
                     TransmitNextFrame();
                     _screenCapture.DelayNextCapture();
                     captureAttempt = 1; // Reset attempt count
+                    backoffMillis = AppConstants.CAPTURE_FAILED_COOLDOWN_MILLIS;
                 }
                 catch ( Exception ex )
                 {
@@ -184,7 +199,11 @@ namespace HyperionScreenCap.Helper
                     else
                     {
                         LOG.Info($"{this}: Waiting before next screen capture attempt");
-                        Thread.Sleep(AppConstants.CAPTURE_FAILED_COOLDOWN_MILLIS);
+                        Thread.Sleep(backoffMillis);
+
+                        // Exponential backoff, capped at MAX_BACKOFF_MILLIS
+                        if ( backoffMillis < AppConstants.MAX_BACKOFF_MILLIS )
+                            backoffMillis *= 2;
                     }
                 }
             }

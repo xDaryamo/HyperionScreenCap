@@ -12,11 +12,13 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using log4net;
 
 namespace HyperionScreenCap
 {
     class DX11ScreenCapture : IScreenCapture
     {
+        private static readonly ILog LOG = LogManager.GetLogger(typeof(DX11ScreenCapture));
         private int _adapterIndex;
         private int _monitorIndex;
         private int _scalingFactor;
@@ -39,6 +41,7 @@ namespace HyperionScreenCap
         private int _minCaptureTime;
         private Stopwatch _captureTimer;
         private bool _desktopDuplicatorInvalid;
+        private bool _deviceInvalid;
         private bool _disposed;
 
         public int CaptureWidth { get; private set; }
@@ -156,11 +159,16 @@ namespace HyperionScreenCap
             _duplicatedOutput = _output1.DuplicateOutput(_device);
 
             _desktopDuplicatorInvalid = false;
+            _deviceInvalid = false;
         }
 
         public byte[] Capture()
         {
-            if ( _desktopDuplicatorInvalid )
+            if ( _deviceInvalid )
+            {
+                RecreateD3DDevice();
+            }
+            else if ( _desktopDuplicatorInvalid )
             {
                 _duplicatedOutput?.Dispose();
                 InitDesktopDuplicator();
@@ -194,7 +202,10 @@ namespace HyperionScreenCap
                         return _lastCapturedFrame;
 
                     if ( ex.ResultCode.Code == SharpDX.DXGI.ResultCode.AccessLost.Code )
+                    {
                         _desktopDuplicatorInvalid = true;
+                        _deviceInvalid = true;
+                    }
 
                     throw ex;
                 }
@@ -232,6 +243,104 @@ namespace HyperionScreenCap
                 // Ignore DXGI_ERROR_INVALID_CALL, DXGI_ERROR_ACCESS_LOST errors since capture is already complete
                 try { _duplicatedOutput.ReleaseFrame(); } catch { }
             }
+        }
+
+        private void RecreateD3DDevice()
+        {
+            LOG.Info($"DX11: Recreating D3D11 resources due to AccessLost");
+
+            // Dispose all D3D11 resources
+            _stagingTexture?.Dispose();
+            _smallerTexture?.Dispose();
+            _smallerTextureView?.Dispose();
+            _duplicatedOutput?.Dispose();
+            _output1?.Dispose();
+            _device?.Dispose();
+            _output?.Dispose();
+            _adapter?.Dispose();
+            _factory?.Dispose();
+
+            _stagingTexture = null;
+            _smallerTexture = null;
+            _smallerTextureView = null;
+            _duplicatedOutput = null;
+            _output1 = null;
+            _device = null;
+            _output = null;
+            _adapter = null;
+            _factory = null;
+
+            try
+            {
+                // Recreate the entire D3D11 resource chain
+                _factory = new Factory1();
+                _adapter = _factory.GetAdapter1(_adapterIndex);
+                _device = new SharpDX.Direct3D11.Device(_adapter);
+                _output = _adapter.GetOutput(_monitorIndex);
+                _output1 = _output.QueryInterface<Output1>();
+
+                // Recreate staging texture
+                var stagingTextureDesc = new Texture2DDescription
+                {
+                    CpuAccessFlags = CpuAccessFlags.Read,
+                    BindFlags = BindFlags.None,
+                    Format = Format.B8G8R8A8_UNorm,
+                    Width = CaptureWidth,
+                    Height = CaptureHeight,
+                    OptionFlags = ResourceOptionFlags.None,
+                    MipLevels = 1,
+                    ArraySize = 1,
+                    SampleDescription = { Count = 1, Quality = 0 },
+                    Usage = ResourceUsage.Staging
+                };
+                _stagingTexture = new Texture2D(_device, stagingTextureDesc);
+
+                // Recreate smaller texture and shader view
+                int mipLevels;
+                if (_scalingFactor == 1)
+                    mipLevels = 1;
+                else if (_scalingFactor > 0 && _scalingFactor % 2 == 0)
+                {
+                    _scalingFactorLog2 = Convert.ToInt32(Math.Log(_scalingFactor, 2));
+                    mipLevels = 2 + _scalingFactorLog2 - 1;
+                }
+                else
+                    throw new Exception("Invalid scaling factor");
+
+                var smallerTextureDesc = new Texture2DDescription
+                {
+                    CpuAccessFlags = CpuAccessFlags.None,
+                    BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
+                    Format = Format.B8G8R8A8_UNorm,
+                    Width = _width,
+                    Height = _height,
+                    OptionFlags = ResourceOptionFlags.GenerateMipMaps,
+                    MipLevels = mipLevels,
+                    ArraySize = 1,
+                    SampleDescription = { Count = 1, Quality = 0 },
+                    Usage = ResourceUsage.Default
+                };
+                _smallerTexture = new Texture2D(_device, smallerTextureDesc);
+                _smallerTextureView = new ShaderResourceView(_device, _smallerTexture);
+
+                // Recreate duplicator
+                _duplicatedOutput = _output1.DuplicateOutput(_device);
+
+                _deviceInvalid = false;
+                _desktopDuplicatorInvalid = false;
+                LOG.Info("DX11: D3D11 resource recreation successful");
+            }
+            catch ( Exception ex )
+            {
+                _deviceInvalid = true;
+                LOG.Error($"DX11: D3D11 resource recreation failed: {ex.Message}");
+                throw;
+            }
+        }
+
+        public bool IsDeviceInvalid()
+        {
+            return _deviceInvalid;
         }
 
         /// <summary>
@@ -296,6 +405,8 @@ namespace HyperionScreenCap
             _factory?.Dispose();
             _lastCapturedFrame = null;
             _disposed = true;
+            _desktopDuplicatorInvalid = false;
+            _deviceInvalid = false;
         }
 
         public bool IsDisposed()
