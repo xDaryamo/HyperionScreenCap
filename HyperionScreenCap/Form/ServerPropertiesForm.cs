@@ -3,6 +3,7 @@ using log4net;
 using System;
 using System.ComponentModel;
 using System.Windows.Forms;
+using System.Globalization;
 
 namespace HyperionScreenCap
 {
@@ -40,9 +41,33 @@ namespace HyperionScreenCap
             tbDx9CaptureHeight.Text = TaskConfiguration.Dx9CaptureHeight.ToString();
             tbDx9CaptureInterval.Text = TaskConfiguration.Dx9CaptureInterval.ToString();
 
+            // HDR tone mapping fields
+            chkDx11HdrEnabled.Checked = TaskConfiguration.Dx11HdrToneMappingEnabled;
+            cboDx11ToneMappingMethod.SelectedIndex = (int)TaskConfiguration.Dx11HdrToneMappingMethod;
+            nudDx11HdrPeakNits.Value = Math.Max(nudDx11HdrPeakNits.Minimum,
+                Math.Min(nudDx11HdrPeakNits.Maximum, TaskConfiguration.Dx11HdrPeakLuminanceNits));
+            decimal saturationDecimal = (decimal)TaskConfiguration.Dx11HdrSaturation;
+            nudDx11HdrSaturation.Value = saturationDecimal < nudDx11HdrSaturation.Minimum
+                ? nudDx11HdrSaturation.Minimum
+                : (saturationDecimal > nudDx11HdrSaturation.Maximum ? nudDx11HdrSaturation.Maximum : saturationDecimal);
+            UpdateHdrControlsEnabled();
+
             var hyperionServersBindingList = new BindingList<HyperionServer>(TaskConfiguration.HyperionServers);
             var hyperionServersDataSource = new BindingSource(hyperionServersBindingList, null);
             dgHyperionAddress.DataSource = hyperionServersDataSource;
+        }
+
+        private void UpdateHdrControlsEnabled()
+        {
+            bool enabled = chkDx11HdrEnabled.Checked;
+            cboDx11ToneMappingMethod.Enabled = enabled;
+            nudDx11HdrPeakNits.Enabled = enabled;
+            nudDx11HdrSaturation.Enabled = enabled;
+        }
+
+        private void chkDx11HdrEnabled_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateHdrControlsEnabled();
         }
 
         private void SaveFormFields()
@@ -57,6 +82,12 @@ namespace HyperionScreenCap
             TaskConfiguration.Dx9CaptureWidth = int.Parse(tbDx9CaptureWidth.Text);
             TaskConfiguration.Dx9CaptureHeight = int.Parse(tbDx9CaptureHeight.Text);
             TaskConfiguration.Dx9CaptureInterval = int.Parse(tbDx9CaptureInterval.Text);
+
+            // HDR tone mapping fields
+            TaskConfiguration.Dx11HdrToneMappingEnabled = chkDx11HdrEnabled.Checked;
+            TaskConfiguration.Dx11HdrToneMappingMethod = (ToneMappingMethod)cboDx11ToneMappingMethod.SelectedIndex;
+            TaskConfiguration.Dx11HdrPeakLuminanceNits = (int)nudDx11HdrPeakNits.Value;
+            TaskConfiguration.Dx11HdrSaturation = (float)nudDx11HdrSaturation.Value;
         }
 
         private void EnableRelevantDxFields(CaptureMethod captureMethod)
@@ -74,6 +105,7 @@ namespace HyperionScreenCap
                     tbDx11FrameCaptureTimeout.Enabled = true;
                     cbDx11ImageScalingFactor.Enabled = true;
                     tbDx11MaxFps.Enabled = true;
+                    grpHdrToneMapping.Enabled = true;
                     break;
 
                 case CaptureMethod.DX9:
@@ -83,6 +115,7 @@ namespace HyperionScreenCap
                     tbDx11FrameCaptureTimeout.Enabled = false;
                     cbDx11ImageScalingFactor.Enabled = false;
                     tbDx11MaxFps.Enabled = false;
+                    grpHdrToneMapping.Enabled = false;
                     cbDx9MonitorIndex.Enabled = true;
                     tbDx9CaptureWidth.Enabled = true;
                     tbDx9CaptureHeight.Enabled = true;

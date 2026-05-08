@@ -234,6 +234,7 @@
     </Compile>
     <Compile Include="Util\MiscUtils.cs" />
     <Compile Include="Model\CaptureMethod.cs" />
+    <Compile Include="Model\ToneMappingMethod.cs" />
     <Compile Include="Model\NotificationLevel.cs" />
     <Compile Include="Util\NotificationUtils.cs" />
     <Compile Include="Program.cs" />

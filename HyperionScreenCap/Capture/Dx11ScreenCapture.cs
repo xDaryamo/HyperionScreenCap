@@ -1,4 +1,6 @@
-﻿using HyperionScreenCap.Capture;
+using HyperionScreenCap.Capture;
+using HyperionScreenCap.Config;
+using HyperionScreenCap.Model;
 using SharpDX;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
@@ -19,11 +21,28 @@ namespace HyperionScreenCap
     class DX11ScreenCapture : IScreenCapture
     {
         private static readonly ILog LOG = LogManager.GetLogger(typeof(DX11ScreenCapture));
+
+        // ---- COM vtable delegate for IDXGIOutput5::DuplicateOutput1 (slot 27) ----
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private delegate int DuplicateOutput1Delegate(
+            IntPtr thisPtr,
+            IntPtr pDevice,
+            uint   flags,
+            uint   formatsCount,
+            [In]   int[]   pFormats,
+            out    IntPtr  ppOutputDuplication);
+
         private int _adapterIndex;
         private int _monitorIndex;
         private int _scalingFactor;
         private int _maxFps;
         private int _frameCaptureTimeout;
+
+        // HDR tone-mapping settings
+        private bool _hdrToneMappingEnabled;
+        private ToneMappingMethod _hdrToneMappingMethod;
+        private float _hdrPeakLuminanceNits;
+        private float _hdrSaturation;
 
         private Factory1 _factory;
         private Adapter _adapter;
@@ -44,8 +63,18 @@ namespace HyperionScreenCap
         private bool _deviceInvalid;
         private bool _disposed;
 
+        // HDR state tracking
+        private SharpDX.DXGI.Format _activeFormat;
+        private bool _isHdrFrame;
+        private bool _wasHdrFrame;
+
         public int CaptureWidth { get; private set; }
         public int CaptureHeight { get; private set; }
+
+        /// <summary>
+        /// True when the most recently captured frame was in R16G16B16A16_Float (HDR) format.
+        /// </summary>
+        public bool IsHdrActive => _isHdrFrame;
 
         public static String GetAvailableMonitors()
         {
@@ -69,14 +98,21 @@ namespace HyperionScreenCap
             return response.ToString();
         }
 
-        public DX11ScreenCapture(int adapterIndex, int monitorIndex, int scalingFactor, int maxFps, int frameCaptureTimeout)
+        public DX11ScreenCapture(int adapterIndex, int monitorIndex, int scalingFactor, int maxFps, int frameCaptureTimeout,
+            bool hdrToneMappingEnabled, ToneMappingMethod hdrToneMappingMethod, int hdrPeakLuminanceNits, float hdrSaturation)
         {
             _adapterIndex = adapterIndex;
             _monitorIndex = monitorIndex;
             _scalingFactor = scalingFactor;
             _maxFps = maxFps;
             _frameCaptureTimeout = frameCaptureTimeout;
+            _hdrToneMappingEnabled = hdrToneMappingEnabled;
+            _hdrToneMappingMethod = hdrToneMappingMethod;
+            _hdrPeakLuminanceNits = hdrPeakLuminanceNits > 0 ? hdrPeakLuminanceNits : 1000;
+            _hdrSaturation = hdrSaturation;
+            _activeFormat = SharpDX.DXGI.Format.B8G8R8A8_UNorm;
             _disposed = true;
+            LOG.Info($"DX11: HDR tone mapping enabled={hdrToneMappingEnabled} method={hdrToneMappingMethod} peakNits={_hdrPeakLuminanceNits} saturation={hdrSaturation}");
         }
 
         public void Initialize()
@@ -113,12 +149,50 @@ namespace HyperionScreenCap
             CaptureWidth = _width / _scalingFactor;
             CaptureHeight = _height / _scalingFactor;
 
-            // Create Staging texture CPU-accessible
+            // Start with SDR format; format may switch in ManagedCapture once we see the first frame
+            _activeFormat = SharpDX.DXGI.Format.B8G8R8A8_UNorm;
+            RecreateIntermediateTextures(_activeFormat, mipLevels);
+
+            _minCaptureTime = 1000 / _maxFps;
+            _captureTimer = new Stopwatch();
+            _disposed = false;
+
+            InitDesktopDuplicator();
+        }
+
+        /// <summary>
+        /// Disposes and recreates _stagingTexture, _smallerTexture, and _smallerTextureView for the
+        /// given pixel format. Called on Initialize, device recreation, and format change.
+        /// </summary>
+        private void RecreateIntermediateTextures(SharpDX.DXGI.Format format, int mipLevels = -1)
+        {
+            _stagingTexture?.Dispose();
+            _stagingTexture = null;
+            _smallerTextureView?.Dispose();
+            _smallerTextureView = null;
+            _smallerTexture?.Dispose();
+            _smallerTexture = null;
+
+            if ( mipLevels < 0 )
+            {
+                // Recompute mip levels from current scaling factor
+                if ( _scalingFactor == 1 )
+                    mipLevels = 1;
+                else if ( _scalingFactor > 0 && _scalingFactor % 2 == 0 )
+                {
+                    _scalingFactorLog2 = Convert.ToInt32(Math.Log(_scalingFactor, 2));
+                    mipLevels = 2 + _scalingFactorLog2 - 1;
+                }
+                else
+                    throw new Exception("Invalid scaling factor");
+            }
+
+            // Staging texture — CPU-readable, no mips, CaptureWidth×CaptureHeight
             var stagingTextureDesc = new Texture2DDescription
             {
                 CpuAccessFlags = CpuAccessFlags.Read,
                 BindFlags = BindFlags.None,
-                Format = Format.B8G8R8A8_UNorm,
+                Format = format,
                 Width = CaptureWidth,
                 Height = CaptureHeight,
                 OptionFlags = ResourceOptionFlags.None,
@@ -129,16 +203,21 @@ namespace HyperionScreenCap
             };
             _stagingTexture = new Texture2D(_device, stagingTextureDesc);
 
-            // Create smaller texture to downscale the captured image
+            // For FP16 with scaling, GenerateMips requires FL11.0. If we can't use mips, we fall
+            // back to CopyResource at full resolution and let the CPU downsample in ToRGBArrayHdr.
+            // We always allocate the smaller texture in the same format.
+            bool useMips = (mipLevels > 1);
             var smallerTextureDesc = new Texture2DDescription
             {
                 CpuAccessFlags = CpuAccessFlags.None,
-                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
-                Format = Format.B8G8R8A8_UNorm,
+                BindFlags = useMips
+                    ? (BindFlags.RenderTarget | BindFlags.ShaderResource)
+                    : BindFlags.ShaderResource,
+                Format = format,
                 Width = _width,
                 Height = _height,
-                OptionFlags = ResourceOptionFlags.GenerateMipMaps,
-                MipLevels = mipLevels,
+                OptionFlags = useMips ? ResourceOptionFlags.GenerateMipMaps : ResourceOptionFlags.None,
+                MipLevels = useMips ? mipLevels : 1,
                 ArraySize = 1,
                 SampleDescription = { Count = 1, Quality = 0 },
                 Usage = ResourceUsage.Default
@@ -146,17 +225,28 @@ namespace HyperionScreenCap
             _smallerTexture = new Texture2D(_device, smallerTextureDesc);
             _smallerTextureView = new ShaderResourceView(_device, _smallerTexture);
 
-            _minCaptureTime = 1000 / _maxFps;
-            _captureTimer = new Stopwatch();
-            _disposed = false;
-
-            InitDesktopDuplicator();
+            LOG.Info($"DX11: RecreateIntermediateTextures format={format} mipLevels={mipLevels}");
         }
 
         private void InitDesktopDuplicator()
         {
-            // Duplicate the output
-            _duplicatedOutput = _output1.DuplicateOutput(_device);
+            // Try IDXGIOutput5::DuplicateOutput1 (vtable slot 27) to get FP16 support
+            try
+            {
+                IntPtr vtable = Marshal.ReadIntPtr(_output1.NativePointer);
+                IntPtr slot26  = Marshal.ReadIntPtr(vtable, 26 * IntPtr.Size);
+                var fn = Marshal.GetDelegateForFunctionPointer<DuplicateOutput1Delegate>(slot26);
+                int[] formats = { (int)SharpDX.DXGI.Format.R16G16B16A16_Float, (int)SharpDX.DXGI.Format.B8G8R8A8_UNorm };
+                int hr = fn(_output1.NativePointer, _device.NativePointer, 0, (uint)formats.Length, formats, out IntPtr dupPtr);
+                Marshal.ThrowExceptionForHR(hr);
+                _duplicatedOutput = new OutputDuplication(dupPtr);
+                LOG.Info("DX11: Using DuplicateOutput1 (HDR-capable)");
+            }
+            catch ( Exception ex )
+            {
+                LOG.Warn($"DX11: DuplicateOutput1 failed ({ex.Message}), falling back to DuplicateOutput (SDR only)");
+                _duplicatedOutput = _output1.DuplicateOutput(_device);
+            }
 
             _desktopDuplicatorInvalid = false;
             _deviceInvalid = false;
@@ -210,29 +300,71 @@ namespace HyperionScreenCap
                     throw ex;
                 }
 
-                // Check if scaling is used
+                // Detect format change (e.g. HDR <-> SDR transition)
+                using ( var capturedTexture = screenResource.QueryInterface<Texture2D>() )
+                {
+                    SharpDX.DXGI.Format capturedFormat = capturedTexture.Description.Format;
+                    if ( capturedFormat != _activeFormat )
+                    {
+                        LOG.Info($"DX11: Display format changed from {_activeFormat} to {capturedFormat}, recreating intermediate textures");
+                        RecreateIntermediateTextures(capturedFormat);
+                        _activeFormat = capturedFormat;
+                    }
+                    _isHdrFrame = (capturedFormat == SharpDX.DXGI.Format.R16G16B16A16_Float);
+                    if ( _isHdrFrame != _wasHdrFrame )
+                    {
+                        LOG.Info($"DX11: Display mode transition → {((_isHdrFrame) ? "HDR" : "SDR")}");
+                        if ( _isHdrFrame )
+                            LOG.Info($"DX11: HDR pixel path active — tonemap={_hdrToneMappingMethod} enabled={_hdrToneMappingEnabled} peakNits={_hdrPeakLuminanceNits} saturation={_hdrSaturation}");
+                        _wasHdrFrame = _isHdrFrame;
+                    }
+
+                    // Check if scaling is used
+                    if ( CaptureWidth != _width )
+                    {
+                        _device.ImmediateContext.CopySubresourceRegion(capturedTexture, 0, null, _smallerTexture, 0);
+                    }
+                    else
+                    {
+                        _device.ImmediateContext.CopyResource(capturedTexture, _stagingTexture);
+                    }
+                }
+
                 if ( CaptureWidth != _width )
                 {
-                    // Copy resource into memory that can be accessed by the CPU
-                    using ( var screenTexture2D = screenResource.QueryInterface<Texture2D>() )
-                        _device.ImmediateContext.CopySubresourceRegion(screenTexture2D, 0, null, _smallerTexture, 0);
-
-                    // Generates the mipmap of the screen
-                    _device.ImmediateContext.GenerateMips(_smallerTextureView);
-
-                    // Copy the mipmap of smallerTexture (size/ scalingFactor) to the staging texture: 1 for /2, 2 for /4...etc
-                    _device.ImmediateContext.CopySubresourceRegion(_smallerTexture, _scalingFactorLog2, null, _stagingTexture, 0);
+                    // Attempt mip generation for downscaling; fall back to CopyResource if it fails
+                    if ( _isHdrFrame )
+                    {
+                        try
+                        {
+                            _device.ImmediateContext.GenerateMips(_smallerTextureView);
+                            _device.ImmediateContext.CopySubresourceRegion(_smallerTexture, _scalingFactorLog2, null, _stagingTexture, 0);
+                        }
+                        catch ( Exception ex )
+                        {
+                            LOG.Warn($"DX11: GenerateMips failed for FP16 ({ex.Message}), returning cached frame");
+                            if ( _lastCapturedFrame != null )
+                                return _lastCapturedFrame;
+                            throw;
+                        }
+                    }
+                    else
+                    {
+                        // SDR path — same as original
+                        _device.ImmediateContext.GenerateMips(_smallerTextureView);
+                        _device.ImmediateContext.CopySubresourceRegion(_smallerTexture, _scalingFactorLog2, null, _stagingTexture, 0);
+                    }
                 }
-                else
-                {
-                    // Copy resource into memory that can be accessed by the CPU
-                    using ( var screenTexture2D = screenResource.QueryInterface<Texture2D>() )
-                        _device.ImmediateContext.CopyResource(screenTexture2D, _stagingTexture);
-                }
+                // (else: already did CopyResource to stagingTexture above)
 
                 // Get the desktop capture texture
                 var mapSource = _device.ImmediateContext.MapSubresource(_stagingTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
-                _lastCapturedFrame = ToRGBArray(mapSource);
+
+                if ( _isHdrFrame && _hdrToneMappingEnabled )
+                    _lastCapturedFrame = ToRGBArrayHdr(mapSource);
+                else
+                    _lastCapturedFrame = ToRGBArray(mapSource);
+
                 return _lastCapturedFrame;
             }
             finally
@@ -279,52 +411,13 @@ namespace HyperionScreenCap
                 _output = _adapter.GetOutput(_monitorIndex);
                 _output1 = _output.QueryInterface<Output1>();
 
-                // Recreate staging texture
-                var stagingTextureDesc = new Texture2DDescription
-                {
-                    CpuAccessFlags = CpuAccessFlags.Read,
-                    BindFlags = BindFlags.None,
-                    Format = Format.B8G8R8A8_UNorm,
-                    Width = CaptureWidth,
-                    Height = CaptureHeight,
-                    OptionFlags = ResourceOptionFlags.None,
-                    MipLevels = 1,
-                    ArraySize = 1,
-                    SampleDescription = { Count = 1, Quality = 0 },
-                    Usage = ResourceUsage.Staging
-                };
-                _stagingTexture = new Texture2D(_device, stagingTextureDesc);
+                // Reset to SDR — InitDesktopDuplicator will try DuplicateOutput1 again
+                _activeFormat = SharpDX.DXGI.Format.B8G8R8A8_UNorm;
+                _isHdrFrame = false;
+                RecreateIntermediateTextures(_activeFormat);
 
-                // Recreate smaller texture and shader view
-                int mipLevels;
-                if (_scalingFactor == 1)
-                    mipLevels = 1;
-                else if (_scalingFactor > 0 && _scalingFactor % 2 == 0)
-                {
-                    _scalingFactorLog2 = Convert.ToInt32(Math.Log(_scalingFactor, 2));
-                    mipLevels = 2 + _scalingFactorLog2 - 1;
-                }
-                else
-                    throw new Exception("Invalid scaling factor");
-
-                var smallerTextureDesc = new Texture2DDescription
-                {
-                    CpuAccessFlags = CpuAccessFlags.None,
-                    BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
-                    Format = Format.B8G8R8A8_UNorm,
-                    Width = _width,
-                    Height = _height,
-                    OptionFlags = ResourceOptionFlags.GenerateMipMaps,
-                    MipLevels = mipLevels,
-                    ArraySize = 1,
-                    SampleDescription = { Count = 1, Quality = 0 },
-                    Usage = ResourceUsage.Default
-                };
-                _smallerTexture = new Texture2D(_device, smallerTextureDesc);
-                _smallerTextureView = new ShaderResourceView(_device, _smallerTexture);
-
-                // Recreate duplicator
-                _duplicatedOutput = _output1.DuplicateOutput(_device);
+                // Recreate duplicator (tries DuplicateOutput1, falls back to DuplicateOutput)
+                InitDesktopDuplicator();
 
                 _deviceInvalid = false;
                 _desktopDuplicatorInvalid = false;
@@ -346,9 +439,8 @@ namespace HyperionScreenCap
         /// <summary>
         /// Reads from the memory locations pointed to by the DataBox and saves it into a byte array
         /// ignoring the alpha component of each pixel.
+        /// SDR path — B8G8R8A8_UNorm. Byte-for-byte identical to original implementation.
         /// </summary>
-        /// <param name="mapSource"></param>
-        /// <returns></returns>
         private byte[] ToRGBArray(DataBox mapSource)
         {
             var sourcePtr = mapSource.DataPointer;
@@ -381,6 +473,169 @@ namespace HyperionScreenCap
                 sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
             }
             return bytes;
+        }
+
+        /// <summary>
+        /// Reads R16G16B16A16_Float pixels from the DataBox, applies tone-mapping and sRGB encoding,
+        /// and returns an RGB byte array. Called only when _isHdrFrame && _hdrToneMappingEnabled.
+        /// </summary>
+        private byte[] ToRGBArrayHdr(DataBox mapSource)
+        {
+            var sourcePtr = mapSource.DataPointer;
+            byte[] bytes = new byte[CaptureWidth * 3 * CaptureHeight];
+            int byteIndex = 0;
+
+            // Precompute normalisation scale: SDR_REF / peak
+            float scale = AppConstants.HDR_SDR_REFERENCE_WHITE_NITS / _hdrPeakLuminanceNits;
+
+            // W for ReinhardExtended: peak / reference
+            float W = _hdrPeakLuminanceNits / AppConstants.HDR_SDR_REFERENCE_WHITE_NITS;
+
+            bool applysat = Math.Abs(_hdrSaturation - 1.0f) > 1e-5f;
+
+            for ( int y = 0; y < CaptureHeight; y++ )
+            {
+                // 8 bytes per pixel: R16 G16 B16 A16 (all half-floats, little-endian)
+                for ( int x = 0; x < CaptureWidth; x++ )
+                {
+                    int offset = x * 8;
+                    ushort rRaw = (ushort)(Marshal.ReadInt16(sourcePtr, offset));
+                    ushort gRaw = (ushort)(Marshal.ReadInt16(sourcePtr, offset + 2));
+                    ushort bRaw = (ushort)(Marshal.ReadInt16(sourcePtr, offset + 4));
+
+                    // Convert half-float to single-precision (IEEE 754 binary16 -> binary32)
+                    float r = HalfToFloat(rRaw);
+                    float g = HalfToFloat(gRaw);
+                    float b = HalfToFloat(bRaw);
+
+                    // Normalise to [0, ~1] for SDR white
+                    r *= scale;
+                    g *= scale;
+                    b *= scale;
+
+                    // Clamp negatives (scRGB can go negative for out-of-gamut colours)
+                    r = r < 0f ? 0f : r;
+                    g = g < 0f ? 0f : g;
+                    b = b < 0f ? 0f : b;
+
+                    // Tone map per channel
+                    switch ( _hdrToneMappingMethod )
+                    {
+                        case ToneMappingMethod.Clip:
+                            r = r > 1f ? 1f : r;
+                            g = g > 1f ? 1f : g;
+                            b = b > 1f ? 1f : b;
+                            break;
+
+                        case ToneMappingMethod.Reinhard:
+                            r = r / (1f + r);
+                            g = g / (1f + g);
+                            b = b / (1f + b);
+                            break;
+
+                        case ToneMappingMethod.ReinhardExtended:
+                            r = (r * (1f + r / (W * W))) / (1f + r);
+                            g = (g * (1f + g / (W * W))) / (1f + g);
+                            b = (b * (1f + b / (W * W))) / (1f + b);
+                            // Clamp result to [0,1]
+                            r = r < 0f ? 0f : (r > 1f ? 1f : r);
+                            g = g < 0f ? 0f : (g > 1f ? 1f : g);
+                            b = b < 0f ? 0f : (b > 1f ? 1f : b);
+                            break;
+
+                        case ToneMappingMethod.Aces:
+                            r = AcesNarkowicz(r);
+                            g = AcesNarkowicz(g);
+                            b = AcesNarkowicz(b);
+                            break;
+                    }
+
+                    // Optional saturation adjustment
+                    if ( applysat )
+                    {
+                        float lum = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+                        r = lum + _hdrSaturation * (r - lum);
+                        g = lum + _hdrSaturation * (g - lum);
+                        b = lum + _hdrSaturation * (b - lum);
+                        // Clamp to [0,1]
+                        r = r < 0f ? 0f : (r > 1f ? 1f : r);
+                        g = g < 0f ? 0f : (g > 1f ? 1f : g);
+                        b = b < 0f ? 0f : (b > 1f ? 1f : b);
+                    }
+
+                    // sRGB gamma encoding (IEC 61966-2-1)
+                    bytes[byteIndex++] = FloatToSrgbByte(r);
+                    bytes[byteIndex++] = FloatToSrgbByte(g);
+                    bytes[byteIndex++] = FloatToSrgbByte(b);
+                }
+
+                sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
+            }
+            return bytes;
+        }
+
+        /// <summary>
+        /// Converts an IEEE 754 binary16 (half-float) bit pattern to a 32-bit float.
+        /// Handles normals, sub-normals, infinities, and NaN. No library dependency required.
+        /// </summary>
+        private static float HalfToFloat(ushort h)
+        {
+            int sign     = (h >> 15) & 1;
+            int exponent = (h >> 10) & 0x1F;
+            int mantissa =  h        & 0x3FF;
+
+            int fBits;
+            if ( exponent == 0 )
+            {
+                if ( mantissa == 0 )
+                {
+                    // Signed zero
+                    fBits = sign << 31;
+                }
+                else
+                {
+                    // Sub-normal: normalise
+                    exponent = 1;
+                    while ( (mantissa & 0x400) == 0 )
+                    {
+                        mantissa <<= 1;
+                        exponent--;
+                    }
+                    mantissa &= ~0x400;
+                    fBits = (sign << 31) | ((exponent + (127 - 15)) << 23) | (mantissa << 13);
+                }
+            }
+            else if ( exponent == 31 )
+            {
+                // Infinity or NaN
+                fBits = (sign << 31) | (0xFF << 23) | (mantissa << 13);
+            }
+            else
+            {
+                // Normal number
+                fBits = (sign << 31) | ((exponent + (127 - 15)) << 23) | (mantissa << 13);
+            }
+
+            // Reinterpret bits as float via an unsafe union trick using BitConverter
+            byte[] bytes = BitConverter.GetBytes(fBits);
+            return BitConverter.ToSingle(bytes, 0);
+        }
+
+        private static float AcesNarkowicz(float x)
+        {
+            float result = (x * (2.51f * x + 0.03f)) / (x * (2.43f * x + 0.59f) + 0.14f);
+            return result < 0f ? 0f : (result > 1f ? 1f : result);
+        }
+
+        private static byte FloatToSrgbByte(float x)
+        {
+            float encoded = x <= 0.0031308f
+                ? 12.92f * x
+                : 1.055f * (float)Math.Pow(x, 1.0 / 2.4) - 0.055f;
+            int quantised = (int)(encoded * 255f + 0.5f);
+            if ( quantised < 0 ) quantised = 0;
+            if ( quantised > 255 ) quantised = 255;
+            return (byte)quantised;
         }
 
         public void DelayNextCapture()

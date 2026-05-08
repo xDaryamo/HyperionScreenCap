@@ -41,6 +41,11 @@ namespace HyperionScreenCap.Config
         public const int CAPTURE_FAILURE_DETECTION_INTERVAL = 2000;
 
         /// <summary>
+        /// SDR reference white level in nits used for HDR tone-mapping normalisation.
+        /// </summary>
+        public const float HDR_SDR_REFERENCE_WHITE_NITS = 80f;
+
+        /// <summary>
         /// File name for debugging screen captured by this application.
         /// </summary>
         public static string DEBUG_IMAGE_FILE_NAME = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
