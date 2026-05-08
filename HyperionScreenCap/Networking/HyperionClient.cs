@@ -69,7 +69,7 @@ namespace HyperionScreenCap.Networking
             return _socket.Connected;
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             LOG.Info($"Disconnecting {this}");
             TryClearPriority(); // TODO : this can cause thread blocking issues

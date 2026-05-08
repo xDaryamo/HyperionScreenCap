@@ -57,6 +57,12 @@ namespace HyperionScreenCap.Networking
             _stream.Write(messageToSend, 0, messageSize);
         }
 
+        public override void Dispose()
+        {
+            prioritySet = false;
+            base.Dispose();
+        }
+
         public override String ToString()
         {
             return $"FbsClinet[{_host}:{_port} ({_priority})]";
