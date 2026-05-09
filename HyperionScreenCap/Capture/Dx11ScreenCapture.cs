@@ -71,9 +71,20 @@ namespace HyperionScreenCap
         private bool _isHdrFrame;
         private bool _wasHdrFrame;
 
+        private byte[] _captureBuffer;
+
         private bool _debugCaptureEnabled;
         private int _debugFrameCount;
         private const int DEBUG_FRAME_INTERVAL = 300;
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
+        private struct FloatUIntUnion
+        {
+            [System.Runtime.InteropServices.FieldOffset(0)] public float Float;
+            [System.Runtime.InteropServices.FieldOffset(0)] public uint UInt;
+        }
+
+        private static readonly byte[] SrgbLut = BuildSrgbLut();
 
         public int CaptureWidth { get; private set; }
         public int CaptureHeight { get; private set; }
@@ -158,6 +169,7 @@ namespace HyperionScreenCap
 
             CaptureWidth = _width / _scalingFactor;
             CaptureHeight = _height / _scalingFactor;
+            _captureBuffer = new byte[CaptureWidth * 3 * CaptureHeight];
 
             // Start with SDR format; format may switch in ManagedCapture once we see the first frame
             _activeFormat = SharpDX.DXGI.Format.B8G8R8A8_UNorm;
@@ -439,6 +451,7 @@ namespace HyperionScreenCap
                 // Recreate duplicator (tries DuplicateOutput1, falls back to DuplicateOutput)
                 InitDesktopDuplicator();
 
+                _captureBuffer = new byte[CaptureWidth * 3 * CaptureHeight];
                 _deviceInvalid = false;
                 _desktopDuplicatorInvalid = false;
                 LOG.Info("DX11: D3D11 resource recreation successful");
@@ -464,7 +477,7 @@ namespace HyperionScreenCap
         private byte[] ToRGBArray(DataBox mapSource)
         {
             var sourcePtr = mapSource.DataPointer;
-            byte[] bytes = new byte[CaptureWidth * 3 * CaptureHeight];
+            var bytes = _captureBuffer;
             int byteIndex = 0;
             for ( int y = 0; y < CaptureHeight; y++ )
             {
@@ -502,7 +515,7 @@ namespace HyperionScreenCap
         private byte[] ToRGBArrayHdr(DataBox mapSource)
         {
             var sourcePtr = mapSource.DataPointer;
-            byte[] bytes = new byte[CaptureWidth * 3 * CaptureHeight];
+            var bytes = _captureBuffer;
             int byteIndex = 0;
 
             // Normalize so the Windows SDR white level maps to 1.0.
@@ -514,83 +527,77 @@ namespace HyperionScreenCap
 
             bool applysat = Math.Abs(_hdrSaturation - 1.0f) > 1e-5f;
 
-            for ( int y = 0; y < CaptureHeight; y++ )
+            // Opt 5: select tone-mapping delegate once, outside the pixel loops
+            Func<float, float> toneMap;
+            switch ( _hdrToneMappingMethod )
             {
-                // 8 bytes per pixel: R16 G16 B16 A16 (all half-floats, little-endian)
-                for ( int x = 0; x < CaptureWidth; x++ )
+                case ToneMappingMethod.Reinhard:
+                    toneMap = v => v / (1f + v);
+                    break;
+                case ToneMappingMethod.ReinhardExtended:
+                    float W2 = W * W;
+                    toneMap = v => { float t = v * (1f + v / W2) / (1f + v); return t < 0f ? 0f : t > 1f ? 1f : t; };
+                    break;
+                case ToneMappingMethod.Aces:
+                    toneMap = AcesNarkowicz;
+                    break;
+                default: // Clip
+                    toneMap = v => v > 1f ? 1f : v;
+                    break;
+            }
+
+            // Opt 3: unsafe pointer arithmetic replaces Marshal.ReadInt16 per pixel
+            unsafe
+            {
+                for ( int y = 0; y < CaptureHeight; y++ )
                 {
-                    int offset = x * 8;
-                    ushort rRaw = (ushort)(Marshal.ReadInt16(sourcePtr, offset));
-                    ushort gRaw = (ushort)(Marshal.ReadInt16(sourcePtr, offset + 2));
-                    ushort bRaw = (ushort)(Marshal.ReadInt16(sourcePtr, offset + 4));
-
-                    // Convert half-float to single-precision (IEEE 754 binary16 -> binary32)
-                    float r = HalfToFloat(rRaw);
-                    float g = HalfToFloat(gRaw);
-                    float b = HalfToFloat(bRaw);
-
-                    // Normalise to [0, ~1] for SDR white
-                    r *= scale;
-                    g *= scale;
-                    b *= scale;
-
-                    // Clamp negatives (scRGB can go negative for out-of-gamut colours)
-                    r = r < 0f ? 0f : r;
-                    g = g < 0f ? 0f : g;
-                    b = b < 0f ? 0f : b;
-
-                    // Tone map per channel
-                    switch ( _hdrToneMappingMethod )
+                    // 8 bytes per pixel: R16 G16 B16 A16 (all half-floats, little-endian)
+                    ushort* row = (ushort*)((byte*)sourcePtr + y * mapSource.RowPitch);
+                    for ( int x = 0; x < CaptureWidth; x++ )
                     {
-                        case ToneMappingMethod.Clip:
-                            r = r > 1f ? 1f : r;
-                            g = g > 1f ? 1f : g;
-                            b = b > 1f ? 1f : b;
-                            break;
+                        ushort rRaw = row[x * 4];
+                        ushort gRaw = row[x * 4 + 1];
+                        ushort bRaw = row[x * 4 + 2];
 
-                        case ToneMappingMethod.Reinhard:
-                            r = r / (1f + r);
-                            g = g / (1f + g);
-                            b = b / (1f + b);
-                            break;
+                        // Convert half-float to single-precision (IEEE 754 binary16 -> binary32)
+                        float r = HalfToFloat(rRaw);
+                        float g = HalfToFloat(gRaw);
+                        float b = HalfToFloat(bRaw);
 
-                        case ToneMappingMethod.ReinhardExtended:
-                            r = (r * (1f + r / (W * W))) / (1f + r);
-                            g = (g * (1f + g / (W * W))) / (1f + g);
-                            b = (b * (1f + b / (W * W))) / (1f + b);
-                            // Clamp result to [0,1]
+                        // Normalise to [0, ~1] for SDR white
+                        r *= scale;
+                        g *= scale;
+                        b *= scale;
+
+                        // Clamp negatives (scRGB can go negative for out-of-gamut colours)
+                        r = r < 0f ? 0f : r;
+                        g = g < 0f ? 0f : g;
+                        b = b < 0f ? 0f : b;
+
+                        // Tone map per channel (delegate selected once above the loops)
+                        r = toneMap(r);
+                        g = toneMap(g);
+                        b = toneMap(b);
+
+                        // Optional saturation adjustment
+                        if ( applysat )
+                        {
+                            float lum = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+                            r = lum + _hdrSaturation * (r - lum);
+                            g = lum + _hdrSaturation * (g - lum);
+                            b = lum + _hdrSaturation * (b - lum);
+                            // Clamp to [0,1]
                             r = r < 0f ? 0f : (r > 1f ? 1f : r);
                             g = g < 0f ? 0f : (g > 1f ? 1f : g);
                             b = b < 0f ? 0f : (b > 1f ? 1f : b);
-                            break;
+                        }
 
-                        case ToneMappingMethod.Aces:
-                            r = AcesNarkowicz(r);
-                            g = AcesNarkowicz(g);
-                            b = AcesNarkowicz(b);
-                            break;
+                        // sRGB gamma encoding (IEC 61966-2-1)
+                        bytes[byteIndex++] = FloatToSrgbByte(r);
+                        bytes[byteIndex++] = FloatToSrgbByte(g);
+                        bytes[byteIndex++] = FloatToSrgbByte(b);
                     }
-
-                    // Optional saturation adjustment
-                    if ( applysat )
-                    {
-                        float lum = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-                        r = lum + _hdrSaturation * (r - lum);
-                        g = lum + _hdrSaturation * (g - lum);
-                        b = lum + _hdrSaturation * (b - lum);
-                        // Clamp to [0,1]
-                        r = r < 0f ? 0f : (r > 1f ? 1f : r);
-                        g = g < 0f ? 0f : (g > 1f ? 1f : g);
-                        b = b < 0f ? 0f : (b > 1f ? 1f : b);
-                    }
-
-                    // sRGB gamma encoding (IEC 61966-2-1)
-                    bytes[byteIndex++] = FloatToSrgbByte(r);
-                    bytes[byteIndex++] = FloatToSrgbByte(g);
-                    bytes[byteIndex++] = FloatToSrgbByte(b);
                 }
-
-                sourcePtr = IntPtr.Add(sourcePtr, mapSource.RowPitch);
             }
             return bytes;
         }
@@ -637,9 +644,9 @@ namespace HyperionScreenCap
                 fBits = (sign << 31) | ((exponent + (127 - 15)) << 23) | (mantissa << 13);
             }
 
-            // Reinterpret bits as float via an unsafe union trick using BitConverter
-            byte[] bytes = BitConverter.GetBytes(fBits);
-            return BitConverter.ToSingle(bytes, 0);
+            var u = new FloatUIntUnion();
+            u.UInt = (uint)fBits;
+            return u.Float;
         }
 
         private static float AcesNarkowicz(float x)
@@ -650,13 +657,25 @@ namespace HyperionScreenCap
 
         private static byte FloatToSrgbByte(float x)
         {
-            float encoded = x <= 0.0031308f
-                ? 12.92f * x
-                : 1.055f * (float)Math.Pow(x, 1.0 / 2.4) - 0.055f;
-            int quantised = (int)(encoded * 255f + 0.5f);
-            if ( quantised < 0 ) quantised = 0;
-            if ( quantised > 255 ) quantised = 255;
-            return (byte)quantised;
+            if ( x <= 0f ) return 0;
+            if ( x >= 1f ) return 255;
+            return SrgbLut[(int)(x * 4096f)];
+        }
+
+        private static byte[] BuildSrgbLut()
+        {
+            const int size = 4096;
+            var lut = new byte[size + 1]; // +1 so index size is safe
+            for ( int i = 0; i <= size; i++ )
+            {
+                float x = i / (float)size;
+                float encoded = x <= 0.0031308f
+                    ? 12.92f * x
+                    : 1.055f * (float)Math.Pow(x, 1.0 / 2.4) - 0.055f;
+                int q = (int)(encoded * 255f + 0.5f);
+                lut[i] = (byte)(q < 0 ? 0 : q > 255 ? 255 : q);
+            }
+            return lut;
         }
 
         public void DelayNextCapture()
