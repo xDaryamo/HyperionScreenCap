@@ -64,10 +64,9 @@ The HDR tone mapping settings are exposed in the capture configuration dialog un
 | Method | Characteristic |
 |---|---|
 | **Reinhard** (recommended) | Smooth, perceptually natural roll-off. Works well for Ambilight use. |
-| Reinhard Extended | Like Reinhard but preserves more mid-tone contrast. |
-| Uncharted 2 (Filmic) | Filmic S-curve with lifted blacks; more contrast. |
+| Reinhard Extended | Like Reinhard but preserves more mid-tone contrast. Uses Peak Brightness setting. |
 | ACES | Cinema-standard curve; aggressive shoulder and toe. |
-| Clamp | Hard clip at white point. Saturates highlights. |
+| Clip | Hard clip at white point. Saturates highlights. |
 
 ### SDR White Level
 
