@@ -262,7 +262,7 @@ namespace HyperionScreenCap
 
         private void btnAddTaskConfig_Click(object sender, EventArgs e)
         {
-            ServerPropertiesForm editPropFrm = new ServerPropertiesForm(HyperionTaskConfiguration.BuildUsingDefaultSettings());
+            ServerPropertiesForm editPropFrm = new ServerPropertiesForm(HyperionTaskConfiguration.BuildUsingDefaultSettings(), false);
             editPropFrm.ShowDialog();
             if ( editPropFrm.SaveRequested )
             {
@@ -286,7 +286,9 @@ namespace HyperionScreenCap
         private void EditCurrentlySelectedTaskConfiguration()
         {
             int selectedRowIndex = dgTaskConfig.SelectedRows[0].Index;
-            ServerPropertiesForm editPropFrm = new ServerPropertiesForm(_taskConfigurations[selectedRowIndex].DeepCopy());
+            var config = _taskConfigurations[selectedRowIndex];
+            bool isHdrActive = _mainForm.IsHdrActiveForConfig(config.Id);
+            ServerPropertiesForm editPropFrm = new ServerPropertiesForm(config.DeepCopy(), isHdrActive);
             editPropFrm.ShowDialog();
             if ( editPropFrm.SaveRequested )
             {

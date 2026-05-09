@@ -19,6 +19,8 @@ namespace HyperionScreenCap.Helper
         private IScreenCapture _screenCapture;
         private List<HyperionClient> _hyperionClients;
         public bool CaptureEnabled { get; private set; }
+        public string ConfigurationId => _configuration.Id;
+        public bool IsHdrActive => _screenCapture?.IsHdrActive ?? false;
         private Thread _captureThread;
 
         public HyperionTask(HyperionTaskConfiguration configuration, NotificationUtils notificationUtils)
@@ -103,7 +105,6 @@ namespace HyperionScreenCap.Helper
                         _configuration.Dx11ImageScalingFactor,
                         _configuration.Dx11MaxFps,
                         _configuration.Dx11FrameCaptureTimeout,
-                        _configuration.Dx11HdrToneMappingEnabled,
                         _configuration.Dx11HdrToneMappingMethod,
                         _configuration.Dx11HdrPeakLuminanceNits,
                         _configuration.Dx11HdrSaturation,

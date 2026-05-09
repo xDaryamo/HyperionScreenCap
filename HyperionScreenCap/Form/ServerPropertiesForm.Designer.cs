@@ -31,7 +31,6 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ServerPropertiesForm));
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.grpHdrToneMapping = new System.Windows.Forms.GroupBox();
-            this.chkDx11HdrEnabled = new System.Windows.Forms.CheckBox();
             this.lblDx11ToneMappingMethod = new System.Windows.Forms.Label();
             this.cboDx11ToneMappingMethod = new System.Windows.Forms.ComboBox();
             this.lblDx11HdrPeakNits = new System.Windows.Forms.Label();
@@ -96,7 +95,7 @@
             this.gbCaptureApi.Margin = new System.Windows.Forms.Padding(1);
             this.gbCaptureApi.Name = "gbCaptureApi";
             this.gbCaptureApi.Padding = new System.Windows.Forms.Padding(1);
-            this.gbCaptureApi.Size = new System.Drawing.Size(675, 553);
+            this.gbCaptureApi.Size = new System.Drawing.Size(675, 523);
             this.gbCaptureApi.TabIndex = 7;
             this.gbCaptureApi.TabStop = false;
             this.gbCaptureApi.Text = "Screen Capture Method";
@@ -116,10 +115,10 @@
             this.tblScreenCaptureMethod.Name = "tblScreenCaptureMethod";
             this.tblScreenCaptureMethod.Padding = new System.Windows.Forms.Padding(5, 5, 5, 5);
             this.tblScreenCaptureMethod.RowCount = 2;
-            this.tblScreenCaptureMethod.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 395F));
+            this.tblScreenCaptureMethod.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 365F));
             this.tblScreenCaptureMethod.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 130F));
             this.tblScreenCaptureMethod.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 10F));
-            this.tblScreenCaptureMethod.Size = new System.Drawing.Size(673, 470);
+            this.tblScreenCaptureMethod.Size = new System.Drawing.Size(673, 440);
             this.tblScreenCaptureMethod.TabIndex = 0;
             // 
             // rbcmDx9
@@ -467,7 +466,6 @@
             // grpHdrToneMapping
             //
             this.grpHdrToneMapping.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
-            this.grpHdrToneMapping.Controls.Add(this.chkDx11HdrEnabled);
             this.grpHdrToneMapping.Controls.Add(this.lblDx11ToneMappingMethod);
             this.grpHdrToneMapping.Controls.Add(this.cboDx11ToneMappingMethod);
             this.grpHdrToneMapping.Controls.Add(this.lblDx11HdrPeakNits);
@@ -480,28 +478,16 @@
             this.grpHdrToneMapping.Margin = new System.Windows.Forms.Padding(1);
             this.grpHdrToneMapping.Name = "grpHdrToneMapping";
             this.grpHdrToneMapping.Padding = new System.Windows.Forms.Padding(4);
-            this.grpHdrToneMapping.Size = new System.Drawing.Size(440, 185);
+            this.grpHdrToneMapping.Size = new System.Drawing.Size(440, 155);
             this.grpHdrToneMapping.TabIndex = 20;
             this.grpHdrToneMapping.TabStop = false;
             this.grpHdrToneMapping.Text = "HDR Tone Mapping";
-            //
-            // chkDx11HdrEnabled
-            //
-            this.chkDx11HdrEnabled.AutoSize = true;
-            this.chkDx11HdrEnabled.Location = new System.Drawing.Point(8, 22);
-            this.chkDx11HdrEnabled.Margin = new System.Windows.Forms.Padding(4);
-            this.chkDx11HdrEnabled.Name = "chkDx11HdrEnabled";
-            this.chkDx11HdrEnabled.Size = new System.Drawing.Size(191, 20);
-            this.chkDx11HdrEnabled.TabIndex = 21;
-            this.chkDx11HdrEnabled.Text = "Enable HDR tone mapping";
-            this.chkDx11HdrEnabled.UseVisualStyleBackColor = true;
-            this.chkDx11HdrEnabled.CheckedChanged += new System.EventHandler(this.chkDx11HdrEnabled_CheckedChanged);
             //
             // lblDx11ToneMappingMethod
             //
             this.lblDx11ToneMappingMethod.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.lblDx11ToneMappingMethod.AutoSize = true;
-            this.lblDx11ToneMappingMethod.Location = new System.Drawing.Point(8, 52);
+            this.lblDx11ToneMappingMethod.Location = new System.Drawing.Point(8, 22);
             this.lblDx11ToneMappingMethod.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
             this.lblDx11ToneMappingMethod.Name = "lblDx11ToneMappingMethod";
             this.lblDx11ToneMappingMethod.Size = new System.Drawing.Size(140, 16);
@@ -518,17 +504,18 @@
             "Reinhard",
             "Reinhard Extended",
             "ACES"});
-            this.cboDx11ToneMappingMethod.Location = new System.Drawing.Point(220, 48);
+            this.cboDx11ToneMappingMethod.Location = new System.Drawing.Point(220, 18);
             this.cboDx11ToneMappingMethod.Margin = new System.Windows.Forms.Padding(4);
             this.cboDx11ToneMappingMethod.Name = "cboDx11ToneMappingMethod";
             this.cboDx11ToneMappingMethod.Size = new System.Drawing.Size(160, 24);
             this.cboDx11ToneMappingMethod.TabIndex = 23;
+            this.cboDx11ToneMappingMethod.SelectedIndexChanged += new System.EventHandler(this.cboDx11ToneMappingMethod_SelectedIndexChanged);
             //
             // lblDx11HdrPeakNits
             //
             this.lblDx11HdrPeakNits.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.lblDx11HdrPeakNits.AutoSize = true;
-            this.lblDx11HdrPeakNits.Location = new System.Drawing.Point(8, 84);
+            this.lblDx11HdrPeakNits.Location = new System.Drawing.Point(8, 54);
             this.lblDx11HdrPeakNits.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
             this.lblDx11HdrPeakNits.Name = "lblDx11HdrPeakNits";
             this.lblDx11HdrPeakNits.Size = new System.Drawing.Size(160, 16);
@@ -538,7 +525,7 @@
             // nudDx11HdrPeakNits
             //
             this.nudDx11HdrPeakNits.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.nudDx11HdrPeakNits.Location = new System.Drawing.Point(220, 82);
+            this.nudDx11HdrPeakNits.Location = new System.Drawing.Point(220, 52);
             this.nudDx11HdrPeakNits.Margin = new System.Windows.Forms.Padding(4);
             this.nudDx11HdrPeakNits.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
             this.nudDx11HdrPeakNits.Minimum = new decimal(new int[] { 100, 0, 0, 0 });
@@ -552,7 +539,7 @@
             //
             this.lblDx11HdrSaturation.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.lblDx11HdrSaturation.AutoSize = true;
-            this.lblDx11HdrSaturation.Location = new System.Drawing.Point(8, 116);
+            this.lblDx11HdrSaturation.Location = new System.Drawing.Point(8, 86);
             this.lblDx11HdrSaturation.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
             this.lblDx11HdrSaturation.Name = "lblDx11HdrSaturation";
             this.lblDx11HdrSaturation.Size = new System.Drawing.Size(76, 16);
@@ -564,7 +551,7 @@
             this.nudDx11HdrSaturation.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.nudDx11HdrSaturation.DecimalPlaces = 1;
             this.nudDx11HdrSaturation.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
-            this.nudDx11HdrSaturation.Location = new System.Drawing.Point(220, 114);
+            this.nudDx11HdrSaturation.Location = new System.Drawing.Point(220, 84);
             this.nudDx11HdrSaturation.Margin = new System.Windows.Forms.Padding(4);
             this.nudDx11HdrSaturation.Maximum = new decimal(new int[] { 20, 0, 0, 65536 });
             this.nudDx11HdrSaturation.Minimum = new decimal(new int[] { 5, 0, 0, 65536 });
@@ -577,7 +564,7 @@
             //
             this.lblDx11HdrSdrWhiteNits.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.lblDx11HdrSdrWhiteNits.AutoSize = true;
-            this.lblDx11HdrSdrWhiteNits.Location = new System.Drawing.Point(8, 148);
+            this.lblDx11HdrSdrWhiteNits.Location = new System.Drawing.Point(8, 118);
             this.lblDx11HdrSdrWhiteNits.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
             this.lblDx11HdrSdrWhiteNits.Name = "lblDx11HdrSdrWhiteNits";
             this.lblDx11HdrSdrWhiteNits.TabIndex = 28;
@@ -586,7 +573,7 @@
             // nudDx11HdrSdrWhiteNits
             //
             this.nudDx11HdrSdrWhiteNits.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.nudDx11HdrSdrWhiteNits.Location = new System.Drawing.Point(220, 146);
+            this.nudDx11HdrSdrWhiteNits.Location = new System.Drawing.Point(220, 116);
             this.nudDx11HdrSdrWhiteNits.Margin = new System.Windows.Forms.Padding(4);
             this.nudDx11HdrSdrWhiteNits.Maximum = new decimal(new int[] { 500, 0, 0, 0 });
             this.nudDx11HdrSdrWhiteNits.Minimum = new decimal(new int[] { 80, 0, 0, 0 });
@@ -680,7 +667,7 @@
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel1.Controls.Add(this.btnSave, 0, 0);
             this.tableLayoutPanel1.Controls.Add(this.btnCancel, 2, 0);
-            this.tableLayoutPanel1.Location = new System.Drawing.Point(5, 569);
+            this.tableLayoutPanel1.Location = new System.Drawing.Point(5, 539);
             this.tableLayoutPanel1.Margin = new System.Windows.Forms.Padding(1);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 1;
@@ -763,7 +750,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSize = true;
-            this.ClientSize = new System.Drawing.Size(1367, 623);
+            this.ClientSize = new System.Drawing.Size(1367, 593);
             this.Controls.Add(this.label10);
             this.Controls.Add(this.tableLayoutPanel1);
             this.Controls.Add(this.gBHyperionServers);
@@ -801,7 +788,6 @@
 
         private System.ComponentModel.BackgroundWorker backgroundWorker1;
         private System.Windows.Forms.GroupBox grpHdrToneMapping;
-        private System.Windows.Forms.CheckBox chkDx11HdrEnabled;
         private System.Windows.Forms.Label lblDx11ToneMappingMethod;
         private System.Windows.Forms.ComboBox cboDx11ToneMappingMethod;
         private System.Windows.Forms.Label lblDx11HdrPeakNits;

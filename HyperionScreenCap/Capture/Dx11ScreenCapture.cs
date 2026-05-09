@@ -39,7 +39,6 @@ namespace HyperionScreenCap
         private int _frameCaptureTimeout;
 
         // HDR tone-mapping settings
-        private bool _hdrToneMappingEnabled;
         private ToneMappingMethod _hdrToneMappingMethod;
         private float _hdrPeakLuminanceNits;
         private float _hdrSaturation;
@@ -117,7 +116,7 @@ namespace HyperionScreenCap
         }
 
         public DX11ScreenCapture(int adapterIndex, int monitorIndex, int scalingFactor, int maxFps, int frameCaptureTimeout,
-            bool hdrToneMappingEnabled, ToneMappingMethod hdrToneMappingMethod, int hdrPeakLuminanceNits, float hdrSaturation,
+            ToneMappingMethod hdrToneMappingMethod, int hdrPeakLuminanceNits, float hdrSaturation,
             int hdrSdrWhiteNits = 200, bool debugCapture = false)
         {
             _adapterIndex = adapterIndex;
@@ -125,7 +124,6 @@ namespace HyperionScreenCap
             _scalingFactor = scalingFactor;
             _maxFps = maxFps;
             _frameCaptureTimeout = frameCaptureTimeout;
-            _hdrToneMappingEnabled = hdrToneMappingEnabled;
             _hdrToneMappingMethod = hdrToneMappingMethod;
             _hdrPeakLuminanceNits = hdrPeakLuminanceNits > 0 ? hdrPeakLuminanceNits : 1000;
             _hdrSaturation = hdrSaturation;
@@ -133,7 +131,7 @@ namespace HyperionScreenCap
             _debugCaptureEnabled = debugCapture;
             _activeFormat = SharpDX.DXGI.Format.B8G8R8A8_UNorm;
             _disposed = true;
-            LOG.Info($"DX11: HDR tone mapping enabled={hdrToneMappingEnabled} method={hdrToneMappingMethod} peakNits={_hdrPeakLuminanceNits} saturation={hdrSaturation} sdrWhiteNits={_hdrSdrWhiteNits} debugCapture={debugCapture}");
+            LOG.Info($"DX11: HDR tone mapping method={hdrToneMappingMethod} peakNits={_hdrPeakLuminanceNits} saturation={hdrSaturation} sdrWhiteNits={_hdrSdrWhiteNits} debugCapture={debugCapture}");
         }
 
         public void Initialize()
@@ -340,7 +338,7 @@ namespace HyperionScreenCap
                     {
                         LOG.Info($"DX11: Display mode transition → {((_isHdrFrame) ? "HDR" : "SDR")}");
                         if ( _isHdrFrame )
-                            LOG.Info($"DX11: HDR pixel path active — tonemap={_hdrToneMappingMethod} enabled={_hdrToneMappingEnabled} peakNits={_hdrPeakLuminanceNits} saturation={_hdrSaturation}");
+                            LOG.Info($"DX11: HDR pixel path active — tonemap={_hdrToneMappingMethod} peakNits={_hdrPeakLuminanceNits} saturation={_hdrSaturation}");
                         _wasHdrFrame = _isHdrFrame;
                     }
 
@@ -385,7 +383,7 @@ namespace HyperionScreenCap
                 // Get the desktop capture texture
                 var mapSource = _device.ImmediateContext.MapSubresource(_stagingTexture, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
 
-                if ( _isHdrFrame && _hdrToneMappingEnabled )
+                if ( _isHdrFrame )
                     _lastCapturedFrame = ToRGBArrayHdr(mapSource);
                 else
                     _lastCapturedFrame = ToRGBArray(mapSource);

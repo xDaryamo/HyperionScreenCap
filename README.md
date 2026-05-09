@@ -37,6 +37,42 @@ Simply download and install [SetupHyperionScreenCapture.exe](https://github.com/
 The application can be configured using the setup window which can be accessed by right clicking on the system tray icon. The defaults for most of the settings should work out of the box.
 Description of the configuration parameters can be found on the help tab of the setup window.
 
+## HDR Support (DirectX 11)
+
+When Windows is running in HDR mode, the DirectX 11 capture path automatically detects the FP16 (scRGB) frame format and applies tone mapping before sending pixels to Hyperion. This prevents clipping and colour shift that would occur if the raw HDR values were sent directly.
+
+### Requirements
+
+- DirectX 11 capture method selected
+- Windows HDR enabled for the target display
+- Application manifest declaring PerMonitorV2 DPI awareness (included)
+
+### Configuration
+
+The HDR tone mapping settings are exposed in the capture configuration dialog under **HDR Tone Mapping**:
+
+| Setting | Description |
+|---|---|
+| Enable HDR Tone Mapping | Activates FP16 capture and tone mapping. Enabled automatically when HDR is detected. |
+| Tone Mapping Method | Algorithm used to compress HDR luminance into SDR range. **Reinhard is recommended.** |
+| Peak Luminance (nits) | The maximum brightness of your display (e.g. 1000 for a typical HDR TV). |
+| SDR White Level (nits) | The brightness Windows uses for SDR content in HDR mode (default 200). Match the value set in Windows HDR settings. |
+| Saturation | Colour saturation multiplier applied after tone mapping (1.0 = neutral). |
+
+### Tone Mapping Methods
+
+| Method | Characteristic |
+|---|---|
+| **Reinhard** (recommended) | Smooth, perceptually natural roll-off. Works well for Ambilight use. |
+| Reinhard Extended | Like Reinhard but preserves more mid-tone contrast. |
+| Uncharted 2 (Filmic) | Filmic S-curve with lifted blacks; more contrast. |
+| ACES | Cinema-standard curve; aggressive shoulder and toe. |
+| Clamp | Hard clip at white point. Saturates highlights. |
+
+### SDR White Level
+
+Windows boosts the brightness of SDR application content when HDR is active. The default boost is typically 200 nits. If the Ambilight colours look washed out or too dim, adjust **SDR White Level** to match the value shown in Windows Settings > Display > HDR > SDR content brightness.
+
 ## Setup Window
 
 ### Manage screen capture configurations and other application level settings.

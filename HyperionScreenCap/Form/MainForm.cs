@@ -92,6 +92,7 @@ namespace HyperionScreenCap
             // Register various event handlers
             SystemEvents.PowerModeChanged += PowerModeChanged;
             SystemEvents.SessionSwitch += SessionSwitched;
+            SystemEvents.DisplaySettingsChanged += DisplaySettingsChanged;
         }
 
         public void Init(bool reInit = false, bool forceOn = false)
@@ -312,6 +313,14 @@ namespace HyperionScreenCap
             ShowSetupFrom();
         }
 
+        public bool IsHdrActiveForConfig(string configId)
+        {
+            foreach ( HyperionTask task in _hyperionTasks )
+                if ( task.ConfigurationId == configId )
+                    return task.IsHdrActive;
+            return false;
+        }
+
         private void ShowSetupFrom()
         {
             LOG.Info("Loading SetupForm");
@@ -325,6 +334,7 @@ namespace HyperionScreenCap
             // Unregister various event handlers
             SystemEvents.PowerModeChanged -= PowerModeChanged;
             SystemEvents.SessionSwitch -= SessionSwitched;
+            SystemEvents.DisplaySettingsChanged -= DisplaySettingsChanged;
             // Clear tray icon on close
             if ( _trayIcon != null )
             {
@@ -399,6 +409,20 @@ namespace HyperionScreenCap
                 ShutdownBlockReasonDestroy(this.Handle);
             }
             base.WndProc(ref m);
+        }
+
+        private void DisplaySettingsChanged(object sender, EventArgs e)
+        {
+            if ( !CaptureEnabled )
+                return;
+
+            LOG.Info("Display settings changed (HDR/resolution). Restarting capture.");
+            new Thread(() =>
+            {
+                ToggleCapture(CaptureCommand.OFF, false, false);
+                Thread.Sleep(AppConstants.CAPTURE_RESUME_GRACE_MILLIS);
+                ToggleCapture(CaptureCommand.ON, false, false);
+            }) { IsBackground = true }.Start();
         }
 
         private void ResumeCapture()

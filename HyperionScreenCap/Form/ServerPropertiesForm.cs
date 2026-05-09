@@ -1,4 +1,4 @@
-﻿using HyperionScreenCap.Model;
+using HyperionScreenCap.Model;
 using log4net;
 using System;
 using System.ComponentModel;
@@ -14,11 +14,13 @@ namespace HyperionScreenCap
         public HyperionTaskConfiguration TaskConfiguration { get; private set; }
         public bool SaveRequested { get; private set; }
         private HyperionServer _defaultServerConfiguration;
+        private bool _isHdrActive;
 
-        public ServerPropertiesForm(HyperionTaskConfiguration taskConfiguration)
+        public ServerPropertiesForm(HyperionTaskConfiguration taskConfiguration, bool isHdrActive)
         {
             this._defaultServerConfiguration = HyperionServer.BuildUsingDefaultFbsSettings();
             this.TaskConfiguration = taskConfiguration;
+            this._isHdrActive = isHdrActive;
             InitializeComponent();
             this.Text = $"{this.Text} - {taskConfiguration.Id}";
             var protocolColumn = (DataGridViewComboBoxColumn) this.dgHyperionAddress.Columns.GetFirstColumn(DataGridViewElementStates.Visible);
@@ -42,7 +44,6 @@ namespace HyperionScreenCap
             tbDx9CaptureInterval.Text = TaskConfiguration.Dx9CaptureInterval.ToString();
 
             // HDR tone mapping fields
-            chkDx11HdrEnabled.Checked = TaskConfiguration.Dx11HdrToneMappingEnabled;
             chkDx11DebugCapture.Checked = TaskConfiguration.Dx11DebugCapture;
             cboDx11ToneMappingMethod.SelectedIndex = (int)TaskConfiguration.Dx11HdrToneMappingMethod;
             nudDx11HdrPeakNits.Value = Math.Max(nudDx11HdrPeakNits.Minimum,
@@ -53,26 +54,11 @@ namespace HyperionScreenCap
                 : (saturationDecimal > nudDx11HdrSaturation.Maximum ? nudDx11HdrSaturation.Maximum : saturationDecimal);
             nudDx11HdrSdrWhiteNits.Value = Math.Max(nudDx11HdrSdrWhiteNits.Minimum,
                 Math.Min(nudDx11HdrSdrWhiteNits.Maximum, TaskConfiguration.Dx11HdrSdrWhiteNits));
-            UpdateHdrControlsEnabled();
+            UpdatePeakNitsEnabled();
 
             var hyperionServersBindingList = new BindingList<HyperionServer>(TaskConfiguration.HyperionServers);
             var hyperionServersDataSource = new BindingSource(hyperionServersBindingList, null);
             dgHyperionAddress.DataSource = hyperionServersDataSource;
-        }
-
-        private void UpdateHdrControlsEnabled()
-        {
-            bool enabled = chkDx11HdrEnabled.Checked;
-            cboDx11ToneMappingMethod.Enabled = enabled;
-            nudDx11HdrPeakNits.Enabled = enabled;
-            nudDx11HdrSaturation.Enabled = enabled;
-            nudDx11HdrSdrWhiteNits.Enabled = enabled;
-            lblDx11HdrSdrWhiteNits.Enabled = enabled;
-        }
-
-        private void chkDx11HdrEnabled_CheckedChanged(object sender, EventArgs e)
-        {
-            UpdateHdrControlsEnabled();
         }
 
         private void SaveFormFields()
@@ -89,7 +75,6 @@ namespace HyperionScreenCap
             TaskConfiguration.Dx9CaptureInterval = int.Parse(tbDx9CaptureInterval.Text);
 
             // HDR tone mapping fields
-            TaskConfiguration.Dx11HdrToneMappingEnabled = chkDx11HdrEnabled.Checked;
             TaskConfiguration.Dx11HdrToneMappingMethod = (ToneMappingMethod)cboDx11ToneMappingMethod.SelectedIndex;
             TaskConfiguration.Dx11HdrPeakLuminanceNits = (int)nudDx11HdrPeakNits.Value;
             TaskConfiguration.Dx11HdrSaturation = (float)nudDx11HdrSaturation.Value;
@@ -112,7 +97,7 @@ namespace HyperionScreenCap
                     tbDx11FrameCaptureTimeout.Enabled = true;
                     cbDx11ImageScalingFactor.Enabled = true;
                     tbDx11MaxFps.Enabled = true;
-                    grpHdrToneMapping.Enabled = true;
+                    grpHdrToneMapping.Enabled = _isHdrActive;
                     break;
 
                 case CaptureMethod.DX9:
@@ -254,6 +239,18 @@ namespace HyperionScreenCap
             e.Row.Cells[2].Value = _defaultServerConfiguration.Port;
             e.Row.Cells[3].Value = _defaultServerConfiguration.Priority;
             e.Row.Cells[4].Value = _defaultServerConfiguration.MessageDuration;
+        }
+
+        private void UpdatePeakNitsEnabled()
+        {
+            bool enabled = cboDx11ToneMappingMethod.SelectedIndex == (int)ToneMappingMethod.ReinhardExtended;
+            nudDx11HdrPeakNits.Enabled = enabled;
+            lblDx11HdrPeakNits.Enabled = enabled;
+        }
+
+        private void cboDx11ToneMappingMethod_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            UpdatePeakNitsEnabled();
         }
 
         private void rbcmDx11_CheckedChanged(object sender, EventArgs e)
