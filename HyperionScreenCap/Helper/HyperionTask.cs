@@ -97,8 +97,18 @@ namespace HyperionScreenCap.Helper
                     break;
 
                 case CaptureMethod.DX11:
-                    _screenCapture = new DX11ScreenCapture(_configuration.Dx11AdapterIndex, _configuration.Dx11MonitorIndex, _configuration.Dx11ImageScalingFactor,
-                        _configuration.Dx11MaxFps, _configuration.Dx11FrameCaptureTimeout);
+                    _screenCapture = new DX11ScreenCapture(
+                        _configuration.Dx11AdapterIndex,
+                        _configuration.Dx11MonitorIndex,
+                        _configuration.Dx11ImageScalingFactor,
+                        _configuration.Dx11MaxFps,
+                        _configuration.Dx11FrameCaptureTimeout,
+                        _configuration.Dx11HdrToneMappingEnabled,
+                        _configuration.Dx11HdrToneMappingMethod,
+                        _configuration.Dx11HdrPeakLuminanceNits,
+                        _configuration.Dx11HdrSaturation,
+                        _configuration.Dx11HdrSdrWhiteNits,
+                        _configuration.Dx11DebugCapture);
                     break;
 
                 default:

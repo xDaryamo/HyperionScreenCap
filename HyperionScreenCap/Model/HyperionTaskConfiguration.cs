@@ -19,6 +19,12 @@ namespace HyperionScreenCap.Model
         public int Dx11ImageScalingFactor { get; set; }
         public int Dx11AdapterIndex { get; set; }
         public int Dx11MonitorIndex { get; set; }
+        public bool Dx11HdrToneMappingEnabled { get; set; } = false;
+        public ToneMappingMethod Dx11HdrToneMappingMethod { get; set; } = ToneMappingMethod.Reinhard;
+        public int Dx11HdrPeakLuminanceNits { get; set; } = 1000;
+        public float Dx11HdrSaturation { get; set; } = 1.0f;
+        public int Dx11HdrSdrWhiteNits { get; set; } = 200;
+        public bool Dx11DebugCapture { get; set; } = false;
         public List<HyperionServer> HyperionServers { get; set; }
 
         public static HyperionTaskConfiguration BuildUsingLegacySettings()
@@ -63,6 +69,12 @@ namespace HyperionScreenCap.Model
                 Dx11ImageScalingFactor = 32,
                 Dx11AdapterIndex = 0,
                 Dx11MonitorIndex = 0,
+                Dx11HdrToneMappingEnabled = false,
+                Dx11HdrToneMappingMethod = ToneMappingMethod.Reinhard,
+                Dx11HdrPeakLuminanceNits = 1000,
+                Dx11HdrSaturation = 1.0f,
+                Dx11HdrSdrWhiteNits = 200,
+                Dx11DebugCapture = false,
                 HyperionServers = hyperionServers
             };
         }

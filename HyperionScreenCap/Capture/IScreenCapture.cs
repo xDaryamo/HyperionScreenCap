@@ -16,5 +16,11 @@ namespace HyperionScreenCap.Capture
 
         bool IsDisposed();
 
+        /// <summary>
+        /// Returns true when the most recently captured frame was in HDR (R16G16B16A16_Float) format.
+        /// Always false for non-DX11 capture methods.
+        /// </summary>
+        bool IsHdrActive { get; }
+
     }
 }

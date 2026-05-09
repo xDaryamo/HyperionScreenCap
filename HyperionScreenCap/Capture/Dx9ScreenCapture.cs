@@ -153,5 +153,7 @@ namespace HyperionScreenCap
         {
             return _disposed;
         }
+
+        public bool IsHdrActive => false;
     }
 }
