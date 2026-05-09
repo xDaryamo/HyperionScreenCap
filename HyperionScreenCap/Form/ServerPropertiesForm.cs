@@ -43,6 +43,7 @@ namespace HyperionScreenCap
 
             // HDR tone mapping fields
             chkDx11HdrEnabled.Checked = TaskConfiguration.Dx11HdrToneMappingEnabled;
+            chkDx11DebugCapture.Checked = TaskConfiguration.Dx11DebugCapture;
             cboDx11ToneMappingMethod.SelectedIndex = (int)TaskConfiguration.Dx11HdrToneMappingMethod;
             nudDx11HdrPeakNits.Value = Math.Max(nudDx11HdrPeakNits.Minimum,
                 Math.Min(nudDx11HdrPeakNits.Maximum, TaskConfiguration.Dx11HdrPeakLuminanceNits));
@@ -50,6 +51,8 @@ namespace HyperionScreenCap
             nudDx11HdrSaturation.Value = saturationDecimal < nudDx11HdrSaturation.Minimum
                 ? nudDx11HdrSaturation.Minimum
                 : (saturationDecimal > nudDx11HdrSaturation.Maximum ? nudDx11HdrSaturation.Maximum : saturationDecimal);
+            nudDx11HdrSdrWhiteNits.Value = Math.Max(nudDx11HdrSdrWhiteNits.Minimum,
+                Math.Min(nudDx11HdrSdrWhiteNits.Maximum, TaskConfiguration.Dx11HdrSdrWhiteNits));
             UpdateHdrControlsEnabled();
 
             var hyperionServersBindingList = new BindingList<HyperionServer>(TaskConfiguration.HyperionServers);
@@ -63,6 +66,8 @@ namespace HyperionScreenCap
             cboDx11ToneMappingMethod.Enabled = enabled;
             nudDx11HdrPeakNits.Enabled = enabled;
             nudDx11HdrSaturation.Enabled = enabled;
+            nudDx11HdrSdrWhiteNits.Enabled = enabled;
+            lblDx11HdrSdrWhiteNits.Enabled = enabled;
         }
 
         private void chkDx11HdrEnabled_CheckedChanged(object sender, EventArgs e)
@@ -88,6 +93,8 @@ namespace HyperionScreenCap
             TaskConfiguration.Dx11HdrToneMappingMethod = (ToneMappingMethod)cboDx11ToneMappingMethod.SelectedIndex;
             TaskConfiguration.Dx11HdrPeakLuminanceNits = (int)nudDx11HdrPeakNits.Value;
             TaskConfiguration.Dx11HdrSaturation = (float)nudDx11HdrSaturation.Value;
+            TaskConfiguration.Dx11HdrSdrWhiteNits = (int)nudDx11HdrSdrWhiteNits.Value;
+            TaskConfiguration.Dx11DebugCapture = chkDx11DebugCapture.Checked;
         }
 
         private void EnableRelevantDxFields(CaptureMethod captureMethod)

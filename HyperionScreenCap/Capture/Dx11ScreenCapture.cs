@@ -43,6 +43,7 @@ namespace HyperionScreenCap
         private ToneMappingMethod _hdrToneMappingMethod;
         private float _hdrPeakLuminanceNits;
         private float _hdrSaturation;
+        private int _hdrSdrWhiteNits;
 
         private Factory1 _factory;
         private Adapter _adapter;
@@ -62,11 +63,17 @@ namespace HyperionScreenCap
         private bool _desktopDuplicatorInvalid;
         private bool _deviceInvalid;
         private bool _disposed;
+        private float _sdrWhiteNits = 80.0f;
+        private long  _adapterLuid;
 
         // HDR state tracking
         private SharpDX.DXGI.Format _activeFormat;
         private bool _isHdrFrame;
         private bool _wasHdrFrame;
+
+        private bool _debugCaptureEnabled;
+        private int _debugFrameCount;
+        private const int DEBUG_FRAME_INTERVAL = 300;
 
         public int CaptureWidth { get; private set; }
         public int CaptureHeight { get; private set; }
@@ -99,7 +106,8 @@ namespace HyperionScreenCap
         }
 
         public DX11ScreenCapture(int adapterIndex, int monitorIndex, int scalingFactor, int maxFps, int frameCaptureTimeout,
-            bool hdrToneMappingEnabled, ToneMappingMethod hdrToneMappingMethod, int hdrPeakLuminanceNits, float hdrSaturation)
+            bool hdrToneMappingEnabled, ToneMappingMethod hdrToneMappingMethod, int hdrPeakLuminanceNits, float hdrSaturation,
+            int hdrSdrWhiteNits = 200, bool debugCapture = false)
         {
             _adapterIndex = adapterIndex;
             _monitorIndex = monitorIndex;
@@ -110,9 +118,11 @@ namespace HyperionScreenCap
             _hdrToneMappingMethod = hdrToneMappingMethod;
             _hdrPeakLuminanceNits = hdrPeakLuminanceNits > 0 ? hdrPeakLuminanceNits : 1000;
             _hdrSaturation = hdrSaturation;
+            _hdrSdrWhiteNits = hdrSdrWhiteNits > 0 ? hdrSdrWhiteNits : 200;
+            _debugCaptureEnabled = debugCapture;
             _activeFormat = SharpDX.DXGI.Format.B8G8R8A8_UNorm;
             _disposed = true;
-            LOG.Info($"DX11: HDR tone mapping enabled={hdrToneMappingEnabled} method={hdrToneMappingMethod} peakNits={_hdrPeakLuminanceNits} saturation={hdrSaturation}");
+            LOG.Info($"DX11: HDR tone mapping enabled={hdrToneMappingEnabled} method={hdrToneMappingMethod} peakNits={_hdrPeakLuminanceNits} saturation={hdrSaturation} sdrWhiteNits={_hdrSdrWhiteNits} debugCapture={debugCapture}");
         }
 
         public void Initialize()
@@ -156,6 +166,9 @@ namespace HyperionScreenCap
             _minCaptureTime = 1000 / _maxFps;
             _captureTimer = new Stopwatch();
             _disposed = false;
+
+            // Store adapter LUID (kept for potential future use)
+            _adapterLuid = _adapter.Description.Luid;
 
             InitDesktopDuplicator();
         }
@@ -365,6 +378,12 @@ namespace HyperionScreenCap
                 else
                     _lastCapturedFrame = ToRGBArray(mapSource);
 
+                if ( _debugCaptureEnabled && ++_debugFrameCount >= DEBUG_FRAME_INTERVAL )
+                {
+                    _debugFrameCount = 0;
+                    SaveDebugFrame(_lastCapturedFrame);
+                }
+
                 return _lastCapturedFrame;
             }
             finally
@@ -407,6 +426,7 @@ namespace HyperionScreenCap
                 // Recreate the entire D3D11 resource chain
                 _factory = new Factory1();
                 _adapter = _factory.GetAdapter1(_adapterIndex);
+                _adapterLuid = _adapter.Description.Luid;
                 _device = new SharpDX.Direct3D11.Device(_adapter);
                 _output = _adapter.GetOutput(_monitorIndex);
                 _output1 = _output.QueryInterface<Output1>();
@@ -485,11 +505,12 @@ namespace HyperionScreenCap
             byte[] bytes = new byte[CaptureWidth * 3 * CaptureHeight];
             int byteIndex = 0;
 
-            // Precompute normalisation scale: SDR_REF / peak
-            float scale = AppConstants.HDR_SDR_REFERENCE_WHITE_NITS / _hdrPeakLuminanceNits;
-
-            // W for ReinhardExtended: peak / reference
-            float W = _hdrPeakLuminanceNits / AppConstants.HDR_SDR_REFERENCE_WHITE_NITS;
+            // Normalize so the Windows SDR white level maps to 1.0.
+            // scRGB 1.0 = 80 nits; OS boosts SDR apps to _hdrSdrWhiteNits (typically 200 nits),
+            // so SDR white appears as _hdrSdrWhiteNits/80 in the FP16 buffer.
+            float scale = 80.0f / _hdrSdrWhiteNits;
+            // W: how many times brighter than SDR white the HDR peak is
+            float W = _hdrPeakLuminanceNits / _hdrSdrWhiteNits;
 
             bool applysat = Math.Abs(_hdrSaturation - 1.0f) > 1e-5f;
 
@@ -667,6 +688,38 @@ namespace HyperionScreenCap
         public bool IsDisposed()
         {
             return _disposed;
+        }
+
+        private void SaveDebugFrame(byte[] rgb)
+        {
+            try
+            {
+                using ( var bmp = new Bitmap(CaptureWidth, CaptureHeight, PixelFormat.Format24bppRgb) )
+                {
+                    var rect = new Rectangle(0, 0, CaptureWidth, CaptureHeight);
+                    var bd = bmp.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+                    // Format24bppRgb stores BGR in memory; our array is RGB so swap R↔B per pixel
+                    for ( int y = 0; y < CaptureHeight; y++ )
+                    {
+                        IntPtr row = bd.Scan0 + y * bd.Stride;
+                        for ( int x = 0; x < CaptureWidth; x++ )
+                        {
+                            int s = (y * CaptureWidth + x) * 3;
+                            Marshal.WriteByte(row, x * 3,     rgb[s + 2]); // B
+                            Marshal.WriteByte(row, x * 3 + 1, rgb[s + 1]); // G
+                            Marshal.WriteByte(row, x * 3 + 2, rgb[s]);     // R
+                        }
+                    }
+                    bmp.UnlockBits(bd);
+                    string path = Path.Combine(MiscUtils.GetLogDirectory(), "debug_frame.png");
+                    bmp.Save(path, ImageFormat.Png);
+                    LOG.Info($"DX11: Debug frame saved → {path} ({CaptureWidth}×{CaptureHeight})");
+                }
+            }
+            catch ( Exception ex )
+            {
+                LOG.Warn($"DX11: SaveDebugFrame failed: {ex.Message}");
+            }
         }
     }
 }

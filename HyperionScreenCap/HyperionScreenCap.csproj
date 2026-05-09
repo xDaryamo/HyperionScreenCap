@@ -38,6 +38,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>Resources\Hyperion-enabled.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
@@ -194,6 +195,7 @@
   <ItemGroup>
     <Compile Include="ApiServer.cs" />
     <Compile Include="Capture\IScreenCapture.cs" />
+    <Compile Include="Helper\DisplayConfigHelper.cs" />
     <Compile Include="Helper\HyperionTask.cs" />
     <Compile Include="Config\AppConstants.cs" />
     <Compile Include="Capture\Dx11ScreenCapture.cs" />
@@ -259,6 +261,7 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
+    <None Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Form\MainForm.resx">
