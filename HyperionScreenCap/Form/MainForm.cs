@@ -31,6 +31,7 @@ namespace HyperionScreenCap
         private bool _initLock = false;
         private bool _captureSuspended = false;
         private bool _captureToggleInProgress = false;
+        private bool _awaitingSessionUnlock = false;
         public bool CaptureEnabled { get; private set; } = false;
 
         private List<HyperionTask> _hyperionTasks = new List<HyperionTask>();
@@ -372,7 +373,27 @@ namespace HyperionScreenCap
             switch ( powerMode.Mode )
             {
                 case PowerModes.Resume:
-                    ResumeCapture();
+                    if ( SettingsManager.PauseOnUserSwitch && _captureSuspended )
+                    {
+                        // Session is still locked at this point — DXGI will return E_ACCESSDENIED
+                        // until the user unlocks. Defer to SessionUnlock.
+                        LOG.Info("System resumed with session locked. Deferring capture restart until SessionUnlock.");
+                        _awaitingSessionUnlock = true;
+                        new Thread(() =>
+                        {
+                            Thread.Sleep(AppConstants.CAPTURE_RESUME_GRACE_MILLIS + 30000);
+                            if ( _awaitingSessionUnlock )
+                            {
+                                LOG.Info("SessionUnlock fallback timeout reached. Resuming capture.");
+                                _awaitingSessionUnlock = false;
+                                ResumeCapture();
+                            }
+                        }) { IsBackground = true }.Start();
+                    }
+                    else
+                    {
+                        ResumeCapture();
+                    }
                     break;
 
                 case PowerModes.Suspend:
@@ -390,6 +411,7 @@ namespace HyperionScreenCap
             switch ( switchEvent.Reason )
             {
                 case SessionSwitchReason.SessionUnlock:
+                    _awaitingSessionUnlock = false;
                     ResumeCapture();
                     break;
 
