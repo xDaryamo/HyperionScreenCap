@@ -1,41 +1,48 @@
 # Hyperion Screen Capture (Windows Grabber)
 
 <p>
-<a href="https://github.com/sabaatworld/HyperionScreenCap/releases"><img src="https://img.shields.io/github/v/release/sabaatworld/HyperionScreenCap?include_prereleases"/></a>
-<a href="https://github.com/sabaatworld/HyperionScreenCap/releases"><img src="https://img.shields.io/github/release-date/sabaatworld/HyperionScreenCap"/></a>
-<a href="https://github.com/sabaatworld/HyperionScreenCap/releases"><img src="https://img.shields.io/github/downloads/sabaatworld/HyperionScreenCap/total?color=ffa500"/></a>
+<a href="https://github.com/xDaryamo/HyperionScreenCap/releases"><img src="https://img.shields.io/github/v/release/xDaryamo/HyperionScreenCap"/></a>
+<a href="https://github.com/xDaryamo/HyperionScreenCap/releases"><img src="https://img.shields.io/github/release-date/xDaryamo/HyperionScreenCap"/></a>
+<a href="https://github.com/xDaryamo/HyperionScreenCap/actions/workflows/release.yml"><img src="https://github.com/xDaryamo/HyperionScreenCap/actions/workflows/release.yml/badge.svg"/></a>
 </p>
 
-Windows screen capture program for the [Hyperion](https://github.com/tvdzwan/hyperion) open-source Ambilight project.
+Windows screen capture program for the [Hyperion](https://github.com/hyperion-project/hyperion.ng) open-source Ambilight project.
 
-The program uses DirectX 9/11 to capture the screen, resize it and send it to the FlatBuffer or ProtoBuffer interface of Hyperion.
+It captures each monitor with DirectX 11, downscales the image and sends it to the FlatBuffers interface of one or more Hyperion servers.
 
-**Changelog and official forum thread:** https://hyperion-project.org/threads/1018
+This is a fork. The code comes from [hanselb](https://github.com/hanselb/HyperionScreenCap), [RickDB](https://github.com/RickDB/HyperionScreenCap), [sabaatworld](https://github.com/sabaatworld/HyperionScreenCap) and [ctrl-shift-win-b](https://github.com/ctrl-shift-win-b/HyperionScreenCap). See [Credits](#credits) for who wrote what.
 
-## Dependencies
+## What this fork changes
 
-**The following dependencies need to be installed manually**
+I run two monitors, one of them rotated, each with its own LED strip and its own Hyperion instance. These are the changes that setup needed.
 
-[Microsoft DotNet 4.0](https://www.microsoft.com/en-us/download/details.aspx?id=17718)
+- Capture keeps retrying when a Hyperion server is unreachable. Before, it gave up after 90 attempts and stayed off until you restarted it by hand.
+- Rotated monitors are captured in their desktop orientation. Before, a portrait monitor produced an image that was half black.
+- Each task is bound to its monitor's device name (`\\.\DISPLAY1`) and not to its index. Turning one monitor off no longer makes another task capture the wrong screen.
+- A task pauses while its monitor is powered off and resumes when it comes back. The state is read over DDC/CI every 2 seconds.
+- Every device-loss error (UAC prompt, session disconnect, device removed or reset) recreates the capture device and retries every 3 seconds.
+- Every server configured in a task is connected. Before, the loop stopped at the first server that was already connected.
+- DirectX 9 capture, the ProtoBuffer client and the update checker are gone, with the libraries they needed. The package list went from 34 to 14 and the exe from 14 MB to 3 MB.
+- log4net and Newtonsoft.Json were updated to versions without known vulnerabilities.
+- Every push to `master` is built by GitHub Actions. A `fix` or `feat` commit publishes a new release with the exe attached.
 
-[DirectX End-User Runtime](https://www.microsoft.com/en-us/download/details.aspx?displaylang=en&id=35)
+## Requirements
 
-**If screen capture is not working, install the following dependencies as well**
-
-[Visual C++ Redistributable for Visual Studio 2012](https://www.microsoft.com/en-us/download/details.aspx?id=30679)
-
-[Microsoft Visual C++ 2010 Service Pack 1](https://www.microsoft.com/en-us/download/details.aspx?id=26999)
-
-[Microsoft Visual C++ 2008 Service Pack 1](https://www.microsoft.com/en-us/download/details.aspx?id=26368)
+Windows 10 version 1903 or later, or Windows 11. Both include .NET Framework 4.8, so there is nothing to install.
 
 ## Download
 
-Simply download and install [SetupHyperionScreenCapture.exe](https://github.com/sabaatworld/HyperionScreenCap/releases) from the latest release.
+Download `HyperionScreenCap.exe` from the [latest release](https://github.com/xDaryamo/HyperionScreenCap/releases/latest) and run it. There is no installer.
+
+Keep the exe in a fixed folder. Windows stores the settings per exe path, so moving it starts from an empty configuration.
 
 ## Configuration
 
-The application can be configured using the setup window which can be accessed by right clicking on the system tray icon. The defaults for most of the settings should work out of the box.
-Description of the configuration parameters can be found on the help tab of the setup window.
+Right-click the tray icon and open the setup window. Add one capture task per monitor and point each one at its Hyperion server (FlatBuffers port, 19400 by default). The help tab of the setup window describes every parameter.
+
+If your LED controller drops out of live mode on a static screen, lower **Frame capture timeout**. With 100 ms the program resends the last frame 10 times a second when nothing on screen changes. The default is 1250 ms. WLED leaves live mode after 2.5 seconds without data, so at that rate two lost packets in a row are enough to blank the strip.
+
+The REST API is still there and can start or stop the capture remotely. Enable it in the setup window.
 
 ## HDR Support (DirectX 11)
 
@@ -74,12 +81,13 @@ Windows boosts the brightness of SDR application content when HDR is active. The
 
 ## Setup Window
 
+The screenshots below come from upstream and still show the DirectX 9 options that this fork removed.
+
 ### Manage screen capture configurations and other application level settings.
 
 ![Setup Window General Tab](Screenshots/1.png)
 
-
-### Select between DirectX11 & DirectX9 capture methods and define one or more Hyperion server destinations.
+### Define the capture settings and one or more Hyperion server destinations.
 
 ![Setup Window Edit Capture Configuration](Screenshots/2.png)
 
@@ -89,9 +97,32 @@ Windows boosts the brightness of SDR application content when HDR is active. The
 
 ## DirectX11 4K @ 60Hz HDR Demo
 
+Video by sabaatworld.
+
 [![Hyperion TV Ambient Light 4K 60Hz](https://img.youtube.com/vi/gY6-J97fXKc/0.jpg)](https://www.youtube.com/watch?v=gY6-J97fXKc "Hyperion TV Ambient Light 4K 60Hz")
+
+## Building
+
+Open `HyperionScreenCap.sln` in Visual Studio 2022, or build from a command prompt with the Build Tools and the .NET desktop workload installed:
+
+```
+msbuild HyperionScreenCap.sln -t:Restore -p:RestorePackagesConfig=true
+msbuild HyperionScreenCap.sln -p:Configuration=Release
+```
 
 ## Credits
 
+This program is the work of several people, each building on the previous fork.
+
+- [hanselb](https://github.com/hanselb/HyperionScreenCap) wrote the original program.
+- [RickDB](https://github.com/RickDB/HyperionScreenCap) added ProtoBuffer support, the setup window and the REST API.
+- [sabaatworld](https://github.com/sabaatworld/HyperionScreenCap) (Sabaat Ahmad) added DirectX 11 capture, FlatBuffers support, multiple displays and multiple Hyperion servers. His version has its own [forum thread](https://hyperion-project.org/threads/1018).
+- [ctrl-shift-win-b](https://github.com/ctrl-shift-win-b/HyperionScreenCap) (Timo Birnschein) added HDR capture with tone mapping, recovery after sleep and wake, and the fix for the FlatBuffers priority lost after a reconnect. The HDR section above is his.
+- [SouljaVR](https://github.com/SouljaVR/HyperionScreenCap) showed how to recover from UAC prompts and fullscreen games. The device-loss handling here follows his idea.
+
 Icons made by [mynamepong](https://www.flaticon.com/authors/mynamepong), [Good Ware](https://www.flaticon.com/authors/good-ware), [Freepik](https://www.flaticon.com/authors/freepik)
 and [Kiranshastry](https://www.flaticon.com/authors/kiranshastry) from [www.flaticon.com](https://www.flaticon.com/)
+
+## License
+
+MIT, same as upstream. See [LICENSE.txt](LICENSE.txt).
