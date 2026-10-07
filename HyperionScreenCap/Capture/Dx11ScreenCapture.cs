@@ -85,8 +85,13 @@ namespace HyperionScreenCap
 
         private static readonly byte[] SrgbLut = BuildSrgbLut();
 
-        public int CaptureWidth { get; private set; }
-        public int CaptureHeight { get; private set; }
+        private int _capW;
+        private int _capH;
+        private DisplayModeRotation _rotation;
+        private byte[] _rotatedBuffer;
+        private bool SwapsAxes => _rotation == DisplayModeRotation.Rotate90 || _rotation == DisplayModeRotation.Rotate270;
+        public int CaptureWidth => SwapsAxes ? _capH : _capW;
+        public int CaptureHeight => SwapsAxes ? _capW : _capH;
 
         /// <summary>
         /// True when the most recently captured frame was in R16G16B16A16_Float (HDR) format.
@@ -162,12 +167,13 @@ namespace HyperionScreenCap
 
             // Width/Height of desktop to capture
             var desktopBounds = _output.Description.DesktopBounds;
-            _width = desktopBounds.Right - desktopBounds.Left;
-            _height = desktopBounds.Bottom - desktopBounds.Top;
+            _rotation = _output.Description.Rotation;
+            _width = SwapsAxes ? desktopBounds.Bottom - desktopBounds.Top : desktopBounds.Right - desktopBounds.Left;
+            _height = SwapsAxes ? desktopBounds.Right - desktopBounds.Left : desktopBounds.Bottom - desktopBounds.Top;
 
-            CaptureWidth = _width / _scalingFactor;
-            CaptureHeight = _height / _scalingFactor;
-            _captureBuffer = new byte[CaptureWidth * 3 * CaptureHeight];
+            _capW = _width / _scalingFactor;
+            _capH = _height / _scalingFactor;
+            _captureBuffer = new byte[_capW * 3 * _capH];
 
             // Start with SDR format; format may switch in ManagedCapture once we see the first frame
             _activeFormat = SharpDX.DXGI.Format.B8G8R8A8_UNorm;
@@ -210,14 +216,14 @@ namespace HyperionScreenCap
                     throw new Exception("Invalid scaling factor");
             }
 
-            // Staging texture — CPU-readable, no mips, CaptureWidth×CaptureHeight
+            // Staging texture — CPU-readable, no mips, _capW×_capH
             var stagingTextureDesc = new Texture2DDescription
             {
                 CpuAccessFlags = CpuAccessFlags.Read,
                 BindFlags = BindFlags.None,
                 Format = format,
-                Width = CaptureWidth,
-                Height = CaptureHeight,
+                Width = _capW,
+                Height = _capH,
                 OptionFlags = ResourceOptionFlags.None,
                 MipLevels = 1,
                 ArraySize = 1,
@@ -288,10 +294,34 @@ namespace HyperionScreenCap
             }
 
             _captureTimer.Restart();
-            byte[] response = ManagedCapture();
+            byte[] response = Rotate(ManagedCapture());
             _captureTimer.Stop();
 
             return response;
+        }
+
+        private byte[] Rotate(byte[] source)
+        {
+            if ( _rotation != DisplayModeRotation.Rotate90 && _rotation != DisplayModeRotation.Rotate180 && _rotation != DisplayModeRotation.Rotate270 )
+                return source;
+            if ( _rotatedBuffer == null || _rotatedBuffer.Length != source.Length )
+                _rotatedBuffer = new byte[source.Length];
+            int width = CaptureWidth, height = CaptureHeight;
+            for ( int y = 0; y < height; y++ )
+            {
+                for ( int x = 0; x < width; x++ )
+                {
+                    int sourceX, sourceY;
+                    if ( _rotation == DisplayModeRotation.Rotate90 ) { sourceX = y; sourceY = _capH - 1 - x; }
+                    else if ( _rotation == DisplayModeRotation.Rotate270 ) { sourceX = _capW - 1 - y; sourceY = x; }
+                    else { sourceX = _capW - 1 - x; sourceY = _capH - 1 - y; }
+                    int from = (sourceY * _capW + sourceX) * 3, to = (y * width + x) * 3;
+                    _rotatedBuffer[to] = source[from];
+                    _rotatedBuffer[to + 1] = source[from + 1];
+                    _rotatedBuffer[to + 2] = source[from + 2];
+                }
+            }
+            return _rotatedBuffer;
         }
 
         private byte[] ManagedCapture()
@@ -348,7 +378,7 @@ namespace HyperionScreenCap
                     }
 
                     // Check if scaling is used
-                    if ( CaptureWidth != _width )
+                    if ( _capW != _width )
                     {
                         _device.ImmediateContext.CopySubresourceRegion(capturedTexture, 0, null, _smallerTexture, 0);
                     }
@@ -358,7 +388,7 @@ namespace HyperionScreenCap
                     }
                 }
 
-                if ( CaptureWidth != _width )
+                if ( _capW != _width )
                 {
                     // Attempt mip generation for downscaling; fall back to CopyResource if it fails
                     if ( _isHdrFrame )
@@ -454,7 +484,7 @@ namespace HyperionScreenCap
                 // Recreate duplicator (tries DuplicateOutput1, falls back to DuplicateOutput)
                 InitDesktopDuplicator();
 
-                _captureBuffer = new byte[CaptureWidth * 3 * CaptureHeight];
+                _captureBuffer = new byte[_capW * 3 * _capH];
                 _deviceInvalid = false;
                 _desktopDuplicatorInvalid = false;
                 LOG.Info("DX11: D3D11 resource recreation successful");
@@ -519,10 +549,10 @@ namespace HyperionScreenCap
             var sourcePtr = mapSource.DataPointer;
             var bytes = _captureBuffer;
             int byteIndex = 0;
-            for ( int y = 0; y < CaptureHeight; y++ )
+            for ( int y = 0; y < _capH; y++ )
             {
-                Int32[] rowData = new Int32[CaptureWidth];
-                Marshal.Copy(sourcePtr, rowData, 0, CaptureWidth);
+                Int32[] rowData = new Int32[_capW];
+                Marshal.Copy(sourcePtr, rowData, 0, _capW);
 
                 foreach ( Int32 pixelData in rowData )
                 {
@@ -589,11 +619,11 @@ namespace HyperionScreenCap
             // Opt 3: unsafe pointer arithmetic replaces Marshal.ReadInt16 per pixel
             unsafe
             {
-                for ( int y = 0; y < CaptureHeight; y++ )
+                for ( int y = 0; y < _capH; y++ )
                 {
                     // 8 bytes per pixel: R16 G16 B16 A16 (all half-floats, little-endian)
                     ushort* row = (ushort*)((byte*)sourcePtr + y * mapSource.RowPitch);
-                    for ( int x = 0; x < CaptureWidth; x++ )
+                    for ( int x = 0; x < _capW; x++ )
                     {
                         ushort rRaw = row[x * 4];
                         ushort gRaw = row[x * 4 + 1];
@@ -753,17 +783,17 @@ namespace HyperionScreenCap
         {
             try
             {
-                using ( var bmp = new Bitmap(CaptureWidth, CaptureHeight, PixelFormat.Format24bppRgb) )
+                using ( var bmp = new Bitmap(_capW, _capH, PixelFormat.Format24bppRgb) )
                 {
-                    var rect = new Rectangle(0, 0, CaptureWidth, CaptureHeight);
+                    var rect = new Rectangle(0, 0, _capW, _capH);
                     var bd = bmp.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
                     // Format24bppRgb stores BGR in memory; our array is RGB so swap R↔B per pixel
-                    for ( int y = 0; y < CaptureHeight; y++ )
+                    for ( int y = 0; y < _capH; y++ )
                     {
                         IntPtr row = bd.Scan0 + y * bd.Stride;
-                        for ( int x = 0; x < CaptureWidth; x++ )
+                        for ( int x = 0; x < _capW; x++ )
                         {
-                            int s = (y * CaptureWidth + x) * 3;
+                            int s = (y * _capW + x) * 3;
                             Marshal.WriteByte(row, x * 3,     rgb[s + 2]); // B
                             Marshal.WriteByte(row, x * 3 + 1, rgb[s + 1]); // G
                             Marshal.WriteByte(row, x * 3 + 2, rgb[s]);     // R
@@ -772,7 +802,7 @@ namespace HyperionScreenCap
                     bmp.UnlockBits(bd);
                     string path = Path.Combine(MiscUtils.GetLogDirectory(), "debug_frame.png");
                     bmp.Save(path, ImageFormat.Png);
-                    LOG.Info($"DX11: Debug frame saved → {path} ({CaptureWidth}×{CaptureHeight})");
+                    LOG.Info($"DX11: Debug frame saved → {path} ({_capW}×{_capH})");
                 }
             }
             catch ( Exception ex )
