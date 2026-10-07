@@ -19,6 +19,7 @@ namespace HyperionScreenCap.Model
         public int Dx11ImageScalingFactor { get; set; }
         public int Dx11AdapterIndex { get; set; }
         public int Dx11MonitorIndex { get; set; }
+        public string Dx11MonitorDeviceName { get; set; }
         public ToneMappingMethod Dx11HdrToneMappingMethod { get; set; } = ToneMappingMethod.Reinhard;
         public int Dx11HdrPeakLuminanceNits { get; set; } = 1000;
         public float Dx11HdrSaturation { get; set; } = 1.0f;

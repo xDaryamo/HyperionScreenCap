@@ -58,6 +58,12 @@ namespace HyperionScreenCap.Helper
                 LOG.Info($"{this}: Initializing screen capture");
                 _screenCapture.Initialize();
                 LOG.Info($"{this}: Screen capture initialized");
+                string deviceName = (_screenCapture as DX11ScreenCapture)?.MonitorDeviceName;
+                if ( deviceName != null && deviceName != _configuration.Dx11MonitorDeviceName )
+                {
+                    _configuration.Dx11MonitorDeviceName = deviceName;
+                    SettingsManager.SaveSettings();
+                }
             }
             catch ( Exception ex )
             {
@@ -112,7 +118,8 @@ namespace HyperionScreenCap.Helper
                         _configuration.Dx11HdrPeakLuminanceNits,
                         _configuration.Dx11HdrSaturation,
                         _configuration.Dx11HdrSdrWhiteNits,
-                        _configuration.Dx11DebugCapture);
+                        _configuration.Dx11DebugCapture)
+                    { MonitorDeviceName = _configuration.Dx11MonitorDeviceName };
                     break;
 
                 default:

@@ -162,7 +162,7 @@ namespace HyperionScreenCap
             _device = new SharpDX.Direct3D11.Device(_adapter);
 
             // Get DXGI.Output
-            _output = _adapter.GetOutput(_monitorIndex);
+            _output = FindOutput();
             _output1 = _output.QueryInterface<Output1>();
 
             // Width/Height of desktop to capture
@@ -473,7 +473,7 @@ namespace HyperionScreenCap
                 _adapter = _factory.GetAdapter1(_adapterIndex);
                 _adapterLuid = _adapter.Description.Luid;
                 _device = new SharpDX.Direct3D11.Device(_adapter);
-                _output = _adapter.GetOutput(_monitorIndex);
+                _output = FindOutput();
                 _output1 = _output.QueryInterface<Output1>();
 
                 // Reset to SDR — InitDesktopDuplicator will try DuplicateOutput1 again
@@ -495,6 +495,25 @@ namespace HyperionScreenCap
                 LOG.Error($"DX11: D3D11 resource recreation failed: {ex.Message}");
                 throw;
             }
+        }
+
+        public string MonitorDeviceName { get; set; }
+
+        private Output FindOutput()
+        {
+            if ( String.IsNullOrEmpty(MonitorDeviceName) )
+            {
+                Output byIndex = _adapter.GetOutput(_monitorIndex);
+                MonitorDeviceName = byIndex.Description.DeviceName;
+                return byIndex;
+            }
+            foreach ( Output output in _adapter.Outputs )
+            {
+                if ( output.Description.DeviceName == MonitorDeviceName )
+                    return output;
+                output.Dispose();
+            }
+            throw new Exception($"Monitor {MonitorDeviceName} is not connected");
         }
 
         public bool IsDeviceInvalid()
