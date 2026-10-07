@@ -24,6 +24,7 @@ namespace HyperionScreenCap.Model
         public float Dx11HdrSaturation { get; set; } = 1.0f;
         public int Dx11HdrSdrWhiteNits { get; set; } = 200;
         public bool Dx11DebugCapture { get; set; } = false;
+        public bool PauseWhenMonitorOff { get; set; } = true;
         public List<HyperionServer> HyperionServers { get; set; }
 
         public static HyperionTaskConfiguration BuildUsingLegacySettings()

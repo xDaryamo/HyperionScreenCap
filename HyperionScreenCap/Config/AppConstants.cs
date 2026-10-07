@@ -22,6 +22,8 @@ namespace HyperionScreenCap.Config
 
         public const int DEVICE_LOST_RETRY_MILLIS = 3000;
 
+        public const int MONITOR_POWER_POLL_MILLIS = 2000;
+
         /// <summary>
         /// Amount of time to wait before resuming screen capture.
         /// </summary>

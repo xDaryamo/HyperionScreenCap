@@ -472,6 +472,43 @@ namespace HyperionScreenCap
             return _deviceInvalid;
         }
 
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct PhysicalMonitor
+        {
+            public IntPtr Handle;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string Description;
+        }
+
+        [DllImport("dxva2.dll")]
+        private static extern bool GetPhysicalMonitorsFromHMONITOR(IntPtr hMonitor, uint count, [Out] PhysicalMonitor[] monitors);
+
+        [DllImport("dxva2.dll")]
+        private static extern bool DestroyPhysicalMonitors(uint count, PhysicalMonitor[] monitors);
+
+        [DllImport("dxva2.dll")]
+        private static extern bool GetVCPFeatureAndVCPFeatureReply(IntPtr handle, byte code, IntPtr type, out uint current, out uint max);
+
+        private bool _ddcWorked;
+
+        public bool IsMonitorOn()
+        {
+            var monitors = new PhysicalMonitor[1];
+            if ( _output == null || !GetPhysicalMonitorsFromHMONITOR(_output.Description.MonitorHandle, 1, monitors) )
+                return true;
+            try
+            {
+                if ( !GetVCPFeatureAndVCPFeatureReply(monitors[0].Handle, 0xD6, IntPtr.Zero, out uint power, out _) )
+                    return !_ddcWorked;
+                _ddcWorked = true;
+                return power == 1;
+            }
+            finally
+            {
+                DestroyPhysicalMonitors(1, monitors);
+            }
+        }
+
         /// <summary>
         /// Reads from the memory locations pointed to by the DataBox and saves it into a byte array
         /// ignoring the alpha component of each pixel.

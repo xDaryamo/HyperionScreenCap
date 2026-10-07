@@ -5,6 +5,7 @@ using HyperionScreenCap.Networking;
 using log4net;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 
 namespace HyperionScreenCap.Helper
@@ -22,6 +23,8 @@ namespace HyperionScreenCap.Helper
         public string ConfigurationId => _configuration.Id;
         public bool IsHdrActive => _screenCapture?.IsHdrActive ?? false;
         private Thread _captureThread;
+        private Stopwatch _monitorPoll = Stopwatch.StartNew();
+        private int _monitorOffReadings;
 
         public HyperionTask(HyperionTaskConfiguration configuration, NotificationUtils notificationUtils)
         {
@@ -156,6 +159,26 @@ namespace HyperionScreenCap.Helper
             }
         }
 
+        private bool MonitorIsOff()
+        {
+            var dx11 = _screenCapture as DX11ScreenCapture;
+            if ( dx11 == null || !_configuration.PauseWhenMonitorOff )
+                return false;
+            bool wasOff = _monitorOffReadings >= 2;
+            if ( !wasOff && _monitorPoll.ElapsedMilliseconds < AppConstants.MONITOR_POWER_POLL_MILLIS )
+                return false;
+            _monitorPoll.Restart();
+            _monitorOffReadings = dx11.IsMonitorOn() ? 0 : Math.Min(_monitorOffReadings + 1, 2);
+            bool off = _monitorOffReadings >= 2;
+            if ( off != wasOff )
+            {
+                LOG.Info($"{this}: Monitor turned {(off ? "off, pausing" : "on, resuming")} capture");
+                if ( off )
+                    DisposeHyperionClients();
+            }
+            return off;
+        }
+
         private void TransmitNextFrame()
         {
             foreach ( HyperionClient hyperionClient in _hyperionClients )
@@ -186,6 +209,11 @@ namespace HyperionScreenCap.Helper
                 try // This block will help retry capture before giving up
                 {
                     InitScreenCapture();
+                    if ( MonitorIsOff() )
+                    {
+                        Thread.Sleep(AppConstants.MONITOR_POWER_POLL_MILLIS);
+                        continue;
+                    }
                     ConnectHyperionClients();
                     TransmitNextFrame();
                     _screenCapture.DelayNextCapture();
