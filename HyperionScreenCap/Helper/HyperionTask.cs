@@ -132,7 +132,7 @@ namespace HyperionScreenCap.Helper
                 if ( hyperionClient.IsConnected() )
                 {
                     // Hyperion client already initialized. Ignoring request.
-                    return;
+                    continue;
                 }
                 try
                 {
