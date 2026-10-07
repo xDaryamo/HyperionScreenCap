@@ -201,21 +201,13 @@ namespace HyperionScreenCap.Helper
                         _screenCapture?.Dispose();
                         LOG.Info($"{this}: Will re-initialize screen capture on retry");
                     }
-                    if ( ++captureAttempt == AppConstants.MAX_CAPTURE_ATTEMPTS )
-                    {
-                        LOG.Error($"{this}: Max screen capture attempts reached. Giving up.");
-                        _notificationUtils.Error(ex.Message);
-                        CaptureEnabled = false;
-                    }
-                    else
-                    {
-                        LOG.Info($"{this}: Waiting before next screen capture attempt");
-                        Thread.Sleep(backoffMillis);
+                    captureAttempt++;
+                    LOG.Info($"{this}: Waiting before next screen capture attempt");
+                    Thread.Sleep(backoffMillis);
 
-                        // Exponential backoff, capped at MAX_BACKOFF_MILLIS
-                        if ( backoffMillis < AppConstants.MAX_BACKOFF_MILLIS )
-                            backoffMillis *= 2;
-                    }
+                    // Exponential backoff, capped at MAX_BACKOFF_MILLIS
+                    if ( backoffMillis < AppConstants.MAX_BACKOFF_MILLIS )
+                        backoffMillis *= 2;
                 }
             }
         }

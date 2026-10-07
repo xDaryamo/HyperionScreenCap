@@ -6,11 +6,6 @@ namespace HyperionScreenCap.Config
     class AppConstants
     {
         /// <summary>
-        /// Maximum number of consecutive screen capture attempts before giving up and disabling screen capture.
-        /// </summary>
-        public const int MAX_CAPTURE_ATTEMPTS = 90;
-
-        /// <summary>
         /// Number of screen capture failure attemps after which screen capture should be re-initialized.
         /// </summary>
         public const int REINIT_CAPTURE_AFTER_ATTEMPTS = 15;
@@ -34,11 +29,6 @@ namespace HyperionScreenCap.Config
         /// The send and receive timeout for the socket used by the Proto client.
         /// </summary>
         public const int PROTO_CLIENT_SOCKET_TIMEOUT = 2500;
-
-        /// <summary>
-        /// Interval after which each capture thread is polled for failure.
-        /// </summary>
-        public const int CAPTURE_FAILURE_DETECTION_INTERVAL = 2000;
 
         /// <summary>
         /// SDR reference white level in nits used for HDR tone-mapping normalisation.

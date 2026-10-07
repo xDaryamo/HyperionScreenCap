@@ -269,7 +269,6 @@ namespace HyperionScreenCap
                 }
             }
             CaptureEnabled = true;
-            new Thread(DisableCaptureOnFailure) { IsBackground = true }.Start();
             LOG.Info($"Enabled {_hyperionTasks.Count} screen capture(s)");
         }
 
@@ -283,25 +282,6 @@ namespace HyperionScreenCap
             CaptureEnabled = false;
             Thread.Sleep(SettingsManager.CaptureInterval + AppConstants.CAPTURE_FAILED_COOLDOWN_MILLIS + 1000);
             LOG.Info($"Disabled {_hyperionTasks.Count} screen capture(s)");
-        }
-
-        private void DisableCaptureOnFailure()
-        {
-            while ( CaptureEnabled )
-            {
-                foreach ( HyperionTask task in _hyperionTasks )
-                {
-                    if ( !task.CaptureEnabled )
-                    {
-                        // We have found a task for which capture has been disabled due to failure
-                        // Turning off capture and exiting this thread
-                        LOG.Error($"Found {task} with capture disabled due to failure. Issuing OFF command.");
-                        ToggleCapture(CaptureCommand.OFF, false, false);
-                        return;
-                    }
-                }
-                Thread.Sleep(AppConstants.CAPTURE_FAILURE_DETECTION_INTERVAL);
-            }
         }
 
         private void TrayIcon_OnDonateClick(object sender, EventArgs e)
