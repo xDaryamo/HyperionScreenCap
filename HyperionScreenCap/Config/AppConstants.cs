@@ -20,6 +20,8 @@ namespace HyperionScreenCap.Config
         /// </summary>
         public const int MAX_BACKOFF_MILLIS = 30000;
 
+        public const int DEVICE_LOST_RETRY_MILLIS = 3000;
+
         /// <summary>
         /// Amount of time to wait before resuming screen capture.
         /// </summary>

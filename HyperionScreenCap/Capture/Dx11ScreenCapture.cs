@@ -314,7 +314,12 @@ namespace HyperionScreenCap
                     if ( ex.ResultCode.Code == SharpDX.DXGI.ResultCode.WaitTimeout.Code && _lastCapturedFrame != null )
                         return _lastCapturedFrame;
 
-                    if ( ex.ResultCode.Code == SharpDX.DXGI.ResultCode.AccessLost.Code )
+                    if ( ex.ResultCode == SharpDX.DXGI.ResultCode.AccessLost
+                        || ex.ResultCode == SharpDX.DXGI.ResultCode.AccessDenied
+                        || ex.ResultCode == SharpDX.DXGI.ResultCode.SessionDisconnected
+                        || ex.ResultCode == SharpDX.DXGI.ResultCode.DeviceRemoved
+                        || ex.ResultCode == SharpDX.DXGI.ResultCode.DeviceReset
+                        || ex.ResultCode == SharpDX.DXGI.ResultCode.InvalidCall )
                     {
                         _desktopDuplicatorInvalid = true;
                         _deviceInvalid = true;

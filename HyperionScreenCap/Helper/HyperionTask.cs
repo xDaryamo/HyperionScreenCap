@@ -195,6 +195,11 @@ namespace HyperionScreenCap.Helper
                 catch ( Exception ex )
                 {
                     LOG.Error($"{this}: Exception in screen capture attempt: {captureAttempt}", ex);
+                    if ( (_screenCapture as DX11ScreenCapture)?.IsDeviceInvalid() ?? false )
+                    {
+                        Thread.Sleep(AppConstants.DEVICE_LOST_RETRY_MILLIS);
+                        continue;
+                    }
                     if ( captureAttempt > AppConstants.REINIT_CAPTURE_AFTER_ATTEMPTS )
                     {
                         // After a few attempt, try disposing screen capture object as well
