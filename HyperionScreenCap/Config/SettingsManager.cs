@@ -25,7 +25,6 @@ namespace HyperionScreenCap
         public static bool CaptureOnStartup;
         public static bool PauseOnUserSwitch;
         public static bool PauseOnSystemSuspend;
-        public static bool CheckUpdateOnStartup;
 
         // API
         public static int ApiPort = 29445;
@@ -71,7 +70,6 @@ namespace HyperionScreenCap
             Settings.Default.dx11ImageScalingFactor = Dx11ImageScalingFactor;
             Settings.Default.dx11AdapterIndex = Dx11AdapterIndex;
             Settings.Default.dx11MonitorIndex = Dx11MonitorIndex;
-            Settings.Default.checkUpdateOnStartup = CheckUpdateOnStartup;
             Settings.Default.hyperionTaskConfigurations = JsonConvert.SerializeObject(HyperionTaskConfigurations);
             Settings.Default.Save();
             LOG.Info("Settings saved to user.config");
@@ -103,7 +101,6 @@ namespace HyperionScreenCap
             Dx11ImageScalingFactor = Settings.Default.dx11ImageScalingFactor;
             Dx11AdapterIndex = Settings.Default.dx11AdapterIndex;
             Dx11MonitorIndex = Settings.Default.dx11MonitorIndex;
-            CheckUpdateOnStartup = Settings.Default.checkUpdateOnStartup;
             HyperionTaskConfigurations = JsonConvert.DeserializeObject<List<HyperionTaskConfiguration>>(Settings.Default.hyperionTaskConfigurations);
             LOG.Info("Loaded settings from user.config");
         }
@@ -149,7 +146,6 @@ namespace HyperionScreenCap
                     configuration.Enabled = true;
                     foreach (HyperionServer server in configuration.HyperionServers)
                     {
-                        server.Protocol = HyperionServerProtocol.PROTOCOL_BUFFERS;
                         if (server.Priority < HyperionServer.MIN_PRIORITY)
                         {
                             server.Priority = HyperionServer.MIN_PRIORITY;

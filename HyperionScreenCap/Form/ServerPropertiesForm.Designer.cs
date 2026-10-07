@@ -41,17 +41,7 @@
             this.nudDx11HdrSdrWhiteNits = new System.Windows.Forms.NumericUpDown();
             this.gbCaptureApi = new System.Windows.Forms.GroupBox();
             this.tblScreenCaptureMethod = new System.Windows.Forms.TableLayoutPanel();
-            this.rbcmDx9 = new System.Windows.Forms.RadioButton();
             this.rbcmDx11 = new System.Windows.Forms.RadioButton();
-            this.tblDx9Values = new System.Windows.Forms.TableLayoutPanel();
-            this.label1 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
-            this.label3 = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
-            this.tbDx9CaptureWidth = new System.Windows.Forms.TextBox();
-            this.tbDx9CaptureHeight = new System.Windows.Forms.TextBox();
-            this.tbDx9CaptureInterval = new System.Windows.Forms.TextBox();
-            this.cbDx9MonitorIndex = new System.Windows.Forms.ComboBox();
             this.tblDx11Values = new System.Windows.Forms.TableLayoutPanel();
             this.cbDx11MonitorIndex = new System.Windows.Forms.ComboBox();
             this.cbDx11AdapterIndex = new System.Windows.Forms.ComboBox();
@@ -81,7 +71,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.nudDx11HdrSdrWhiteNits)).BeginInit();
             this.gbCaptureApi.SuspendLayout();
             this.tblScreenCaptureMethod.SuspendLayout();
-            this.tblDx9Values.SuspendLayout();
             this.tblDx11Values.SuspendLayout();
             this.gBHyperionServers.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgHyperionAddress)).BeginInit();
@@ -105,9 +94,7 @@
             this.tblScreenCaptureMethod.ColumnCount = 2;
             this.tblScreenCaptureMethod.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 32.87982F));
             this.tblScreenCaptureMethod.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 67.12018F));
-            this.tblScreenCaptureMethod.Controls.Add(this.rbcmDx9, 0, 1);
             this.tblScreenCaptureMethod.Controls.Add(this.rbcmDx11, 0, 0);
-            this.tblScreenCaptureMethod.Controls.Add(this.tblDx9Values, 1, 1);
             this.tblScreenCaptureMethod.Controls.Add(this.tblDx11Values, 1, 0);
             this.tblScreenCaptureMethod.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tblScreenCaptureMethod.Location = new System.Drawing.Point(1, 16);
@@ -121,18 +108,6 @@
             this.tblScreenCaptureMethod.Size = new System.Drawing.Size(673, 440);
             this.tblScreenCaptureMethod.TabIndex = 0;
             // 
-            // rbcmDx9
-            // 
-            this.rbcmDx9.AutoSize = true;
-            this.rbcmDx9.Location = new System.Drawing.Point(6, 204);
-            this.rbcmDx9.Margin = new System.Windows.Forms.Padding(1);
-            this.rbcmDx9.Name = "rbcmDx9";
-            this.rbcmDx9.Size = new System.Drawing.Size(122, 84);
-            this.rbcmDx9.TabIndex = 7;
-            this.rbcmDx9.TabStop = true;
-            this.rbcmDx9.Text = "DirectX 9\r\n- Windows XP+\r\n- Moderate CPU\r\n- Low GPU\r\n- Low FPS\r\n";
-            this.rbcmDx9.UseVisualStyleBackColor = true;
-            // 
             // rbcmDx11
             // 
             this.rbcmDx11.AutoSize = true;
@@ -145,132 +120,6 @@
             this.rbcmDx11.Text = "DirectX 11\r\n- Windows 7 SP1+\r\n- Negligible CPU\r\n- Very Low GPU\r\n- High FPS\r\n";
             this.rbcmDx11.UseVisualStyleBackColor = true;
             this.rbcmDx11.CheckedChanged += new System.EventHandler(this.rbcmDx11_CheckedChanged);
-            // 
-            // tblDx9Values
-            // 
-            this.tblDx9Values.ColumnCount = 2;
-            this.tblDx9Values.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.tblDx9Values.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.tblDx9Values.Controls.Add(this.label1, 0, 0);
-            this.tblDx9Values.Controls.Add(this.label2, 0, 1);
-            this.tblDx9Values.Controls.Add(this.label3, 0, 2);
-            this.tblDx9Values.Controls.Add(this.label4, 0, 3);
-            this.tblDx9Values.Controls.Add(this.tbDx9CaptureWidth, 1, 1);
-            this.tblDx9Values.Controls.Add(this.tbDx9CaptureHeight, 1, 2);
-            this.tblDx9Values.Controls.Add(this.tbDx9CaptureInterval, 1, 3);
-            this.tblDx9Values.Controls.Add(this.cbDx9MonitorIndex, 1, 0);
-            this.tblDx9Values.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.tblDx9Values.Location = new System.Drawing.Point(223, 204);
-            this.tblDx9Values.Margin = new System.Windows.Forms.Padding(1);
-            this.tblDx9Values.Name = "tblDx9Values";
-            this.tblDx9Values.RowCount = 5;
-            this.tblDx9Values.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tblDx9Values.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tblDx9Values.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tblDx9Values.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tblDx9Values.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tblDx9Values.Size = new System.Drawing.Size(444, 197);
-            this.tblDx9Values.TabIndex = 9;
-            // 
-            // label1
-            // 
-            this.label1.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(1, 8);
-            this.label1.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(87, 16);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "Monitor Index";
-            // 
-            // label2
-            // 
-            this.label2.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(1, 39);
-            this.label2.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(92, 16);
-            this.label2.TabIndex = 1;
-            this.label2.Text = "Capture Width";
-            // 
-            // label3
-            // 
-            this.label3.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(1, 69);
-            this.label3.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(97, 16);
-            this.label3.TabIndex = 2;
-            this.label3.Text = "Capture Height";
-            // 
-            // label4
-            // 
-            this.label4.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(1, 99);
-            this.label4.Margin = new System.Windows.Forms.Padding(1, 0, 1, 0);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(130, 16);
-            this.label4.TabIndex = 3;
-            this.label4.Text = "Capture Interval (ms)";
-            // 
-            // tbDx9CaptureWidth
-            // 
-            this.tbDx9CaptureWidth.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.tbDx9CaptureWidth.Location = new System.Drawing.Point(226, 36);
-            this.tbDx9CaptureWidth.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.tbDx9CaptureWidth.MaxLength = 5;
-            this.tbDx9CaptureWidth.Name = "tbDx9CaptureWidth";
-            this.tbDx9CaptureWidth.Size = new System.Drawing.Size(132, 22);
-            this.tbDx9CaptureWidth.TabIndex = 9;
-            this.tbDx9CaptureWidth.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.PreventNonNumeric_KeyPressEventHandler);
-            // 
-            // tbDx9CaptureHeight
-            // 
-            this.tbDx9CaptureHeight.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.tbDx9CaptureHeight.Location = new System.Drawing.Point(226, 66);
-            this.tbDx9CaptureHeight.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.tbDx9CaptureHeight.MaxLength = 5;
-            this.tbDx9CaptureHeight.Name = "tbDx9CaptureHeight";
-            this.tbDx9CaptureHeight.Size = new System.Drawing.Size(132, 22);
-            this.tbDx9CaptureHeight.TabIndex = 10;
-            this.tbDx9CaptureHeight.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.PreventNonNumeric_KeyPressEventHandler);
-            // 
-            // tbDx9CaptureInterval
-            // 
-            this.tbDx9CaptureInterval.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.tbDx9CaptureInterval.Location = new System.Drawing.Point(226, 96);
-            this.tbDx9CaptureInterval.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.tbDx9CaptureInterval.MaxLength = 5;
-            this.tbDx9CaptureInterval.Name = "tbDx9CaptureInterval";
-            this.tbDx9CaptureInterval.Size = new System.Drawing.Size(132, 22);
-            this.tbDx9CaptureInterval.TabIndex = 11;
-            this.tbDx9CaptureInterval.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.PreventNonNumeric_KeyPressEventHandler);
-            // 
-            // cbDx9MonitorIndex
-            // 
-            this.cbDx9MonitorIndex.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.cbDx9MonitorIndex.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
-            this.cbDx9MonitorIndex.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbDx9MonitorIndex.FormattingEnabled = true;
-            this.cbDx9MonitorIndex.Items.AddRange(new object[] {
-            "0",
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9"});
-            this.cbDx9MonitorIndex.Location = new System.Drawing.Point(226, 4);
-            this.cbDx9MonitorIndex.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.cbDx9MonitorIndex.Name = "cbDx9MonitorIndex";
-            this.cbDx9MonitorIndex.Size = new System.Drawing.Size(132, 24);
-            this.cbDx9MonitorIndex.TabIndex = 8;
             // 
             // tblDx11Values
             // 
@@ -772,8 +621,6 @@
             this.gbCaptureApi.ResumeLayout(false);
             this.tblScreenCaptureMethod.ResumeLayout(false);
             this.tblScreenCaptureMethod.PerformLayout();
-            this.tblDx9Values.ResumeLayout(false);
-            this.tblDx9Values.PerformLayout();
             this.tblDx11Values.ResumeLayout(false);
             this.tblDx11Values.PerformLayout();
             this.gBHyperionServers.ResumeLayout(false);
@@ -799,15 +646,6 @@
         private System.Windows.Forms.GroupBox gbCaptureApi;
         private System.Windows.Forms.TableLayoutPanel tblScreenCaptureMethod;
         private System.Windows.Forms.RadioButton rbcmDx11;
-        private System.Windows.Forms.RadioButton rbcmDx9;
-        private System.Windows.Forms.TableLayoutPanel tblDx9Values;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.TextBox tbDx9CaptureWidth;
-        private System.Windows.Forms.TextBox tbDx9CaptureHeight;
-        private System.Windows.Forms.TextBox tbDx9CaptureInterval;
         private System.Windows.Forms.TableLayoutPanel tblDx11Values;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label label6;
@@ -816,7 +654,6 @@
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.TextBox tbDx11MaxFps;
         private System.Windows.Forms.TextBox tbDx11FrameCaptureTimeout;
-        private System.Windows.Forms.ComboBox cbDx9MonitorIndex;
         private System.Windows.Forms.ComboBox cbDx11AdapterIndex;
         private System.Windows.Forms.ComboBox cbDx11MonitorIndex;
         private System.Windows.Forms.GroupBox gBHyperionServers;

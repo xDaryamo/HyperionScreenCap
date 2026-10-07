@@ -38,10 +38,6 @@ namespace HyperionScreenCap
             tbDx11FrameCaptureTimeout.Text = TaskConfiguration.Dx11FrameCaptureTimeout.ToString();
             SelectValueFromComboBox(cbDx11ImageScalingFactor, TaskConfiguration.Dx11ImageScalingFactor);
             tbDx11MaxFps.Text = TaskConfiguration.Dx11MaxFps.ToString();
-            SelectValueFromComboBox(cbDx9MonitorIndex, TaskConfiguration.Dx9MonitorIndex);
-            tbDx9CaptureWidth.Text = TaskConfiguration.Dx9CaptureWidth.ToString();
-            tbDx9CaptureHeight.Text = TaskConfiguration.Dx9CaptureHeight.ToString();
-            tbDx9CaptureInterval.Text = TaskConfiguration.Dx9CaptureInterval.ToString();
 
             // HDR tone mapping fields
             chkDx11DebugCapture.Checked = TaskConfiguration.Dx11DebugCapture;
@@ -63,17 +59,13 @@ namespace HyperionScreenCap
 
         private void SaveFormFields()
         {
-            TaskConfiguration.CaptureMethod = rbcmDx11.Checked ? CaptureMethod.DX11 : CaptureMethod.DX9;
+            TaskConfiguration.CaptureMethod = CaptureMethod.DX11;
             TaskConfiguration.Dx11AdapterIndex = int.Parse(cbDx11AdapterIndex.SelectedItem.ToString());
             TaskConfiguration.Dx11MonitorIndex = int.Parse(cbDx11MonitorIndex.SelectedItem.ToString());
             TaskConfiguration.Dx11MonitorDeviceName = null;
             TaskConfiguration.Dx11FrameCaptureTimeout = int.Parse(tbDx11FrameCaptureTimeout.Text);
             TaskConfiguration.Dx11ImageScalingFactor = int.Parse(cbDx11ImageScalingFactor.SelectedItem.ToString());
             TaskConfiguration.Dx11MaxFps = int.Parse(tbDx11MaxFps.Text);
-            TaskConfiguration.Dx9MonitorIndex = int.Parse(cbDx9MonitorIndex.SelectedItem.ToString());
-            TaskConfiguration.Dx9CaptureWidth = int.Parse(tbDx9CaptureWidth.Text);
-            TaskConfiguration.Dx9CaptureHeight = int.Parse(tbDx9CaptureHeight.Text);
-            TaskConfiguration.Dx9CaptureInterval = int.Parse(tbDx9CaptureInterval.Text);
 
             // HDR tone mapping fields
             TaskConfiguration.Dx11HdrToneMappingMethod = (ToneMappingMethod)cboDx11ToneMappingMethod.SelectedIndex;
@@ -85,39 +77,8 @@ namespace HyperionScreenCap
 
         private void EnableRelevantDxFields(CaptureMethod captureMethod)
         {
-            switch(captureMethod)
-            {
-                case CaptureMethod.DX11:
-                    rbcmDx11.Checked = true;
-                    cbDx9MonitorIndex.Enabled = false;
-                    tbDx9CaptureWidth.Enabled = false;
-                    tbDx9CaptureHeight.Enabled = false;
-                    tbDx9CaptureInterval.Enabled = false;
-                    cbDx11AdapterIndex.Enabled = true;
-                    cbDx11MonitorIndex.Enabled = true;
-                    tbDx11FrameCaptureTimeout.Enabled = true;
-                    cbDx11ImageScalingFactor.Enabled = true;
-                    tbDx11MaxFps.Enabled = true;
-                    grpHdrToneMapping.Enabled = _isHdrActive;
-                    break;
-
-                case CaptureMethod.DX9:
-                    rbcmDx9.Checked = true;
-                    cbDx11AdapterIndex.Enabled = false;
-                    cbDx11MonitorIndex.Enabled = false;
-                    tbDx11FrameCaptureTimeout.Enabled = false;
-                    cbDx11ImageScalingFactor.Enabled = false;
-                    tbDx11MaxFps.Enabled = false;
-                    grpHdrToneMapping.Enabled = false;
-                    cbDx9MonitorIndex.Enabled = true;
-                    tbDx9CaptureWidth.Enabled = true;
-                    tbDx9CaptureHeight.Enabled = true;
-                    tbDx9CaptureInterval.Enabled = true;
-                    break;
-
-                default:
-                    throw new NotImplementedException($"The capture method {captureMethod} is not supported");
-            }
+            rbcmDx11.Checked = true;
+            grpHdrToneMapping.Enabled = _isHdrActive;
         }
 
         private static void SelectValueFromComboBox(ComboBox comboBox, Object value)
@@ -213,10 +174,6 @@ namespace HyperionScreenCap
                             newPortValue = HyperionServer.BuildUsingDefaultFbsSettings().Port;
                             break;
 
-                        case HyperionServerProtocol.PROTOCOL_BUFFERS:
-                            newPortValue = HyperionServer.BuildUsingDefaultProtoSettings().Port;
-                            break;
-
                         default:
                             throw new NotImplementedException($"Hyperion server protocol {serverProtocol} is not supported yet");
                     }
@@ -256,10 +213,7 @@ namespace HyperionScreenCap
 
         private void rbcmDx11_CheckedChanged(object sender, EventArgs e)
         {
-            if ( rbcmDx11.Checked )
-                EnableRelevantDxFields(CaptureMethod.DX11);
-            else
-                EnableRelevantDxFields(CaptureMethod.DX9);
+            EnableRelevantDxFields(CaptureMethod.DX11);
         }
     }
 }

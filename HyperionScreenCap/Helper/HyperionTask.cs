@@ -83,10 +83,6 @@ namespace HyperionScreenCap.Helper
             {
                 switch (server.Protocol)
                 {
-                    case HyperionServerProtocol.PROTOCOL_BUFFERS:
-                        _hyperionClients.Add(new ProtoClient(server.Host, server.Port, server.Priority, server.MessageDuration));
-                        break;
-
                     case HyperionServerProtocol.FLAT_BUFFERS:
                         _hyperionClients.Add(new FbsClinet(server.Host, server.Port, server.Priority, server.MessageDuration));
                         break;
@@ -102,11 +98,6 @@ namespace HyperionScreenCap.Helper
         {
             switch ( _configuration.CaptureMethod )
             {
-                case CaptureMethod.DX9:
-                    _screenCapture = new DX9ScreenCapture(_configuration.Dx9MonitorIndex, _configuration.Dx9CaptureWidth, _configuration.Dx9CaptureHeight,
-                        _configuration.Dx9CaptureInterval);
-                    break;
-
                 case CaptureMethod.DX11:
                     _screenCapture = new DX11ScreenCapture(
                         _configuration.Dx11AdapterIndex,

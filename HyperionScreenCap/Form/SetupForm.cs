@@ -50,7 +50,6 @@ namespace HyperionScreenCap
                 chkApiExcludeTimesEnabled.Checked = SettingsManager.ApiExcludedTimesEnabled;
                 tbApiExcludeStart.Text = SettingsManager.ApiExcludeTimeStart.ToString("HH:mm");
                 tbApiExcludeEnd.Text = SettingsManager.ApiExcludeTimeEnd.ToString("HH:mm");
-                chkCheckUpdate.Checked = SettingsManager.CheckUpdateOnStartup;
                 cbNotificationLevel.Text = SettingsManager.NotificationLevel.ToString();
                 _taskConfigurations = SettingsManager.HyperionTaskConfigurations;
                 Rebind_dgTaskConfig();
@@ -91,9 +90,6 @@ namespace HyperionScreenCap
             {
                 case CaptureMethod.DX11:
                    return $"DX11 Adap:{taskConfiguration.Dx11AdapterIndex} Mon:{taskConfiguration.Dx11MonitorIndex}";
-
-                case CaptureMethod.DX9:
-                    return $"DX9 Mon: {taskConfiguration.Dx9MonitorIndex}";
 
                 default:
                     throw new NotImplementedException($"The capture method {taskConfiguration.CaptureMethod} is not supported");
@@ -146,7 +142,6 @@ namespace HyperionScreenCap
                 SettingsManager.ApiExcludedTimesEnabled = chkApiExcludeTimesEnabled.Checked;
                 SettingsManager.ApiExcludeTimeStart = DateTime.Parse(tbApiExcludeStart.Text);
                 SettingsManager.ApiExcludeTimeEnd = DateTime.Parse(tbApiExcludeEnd.Text);
-                SettingsManager.CheckUpdateOnStartup = chkCheckUpdate.Checked;
                 SettingsManager.NotificationLevel =
                     (NotificationLevel) Enum.Parse(typeof(NotificationLevel), cbNotificationLevel.Text);
                 SettingsManager.HyperionTaskConfigurations = _taskConfigurations;
@@ -248,11 +243,6 @@ namespace HyperionScreenCap
             }
             LOG.Info($"{title}: {msg}");
             MessageBox.Show(msg, title, MessageBoxButtons.OK, icon);
-        }
-
-        private void btnCheckUpdates_Click(object sender, EventArgs e)
-        {
-            UpdateChecker.StartUpdateCheck(false);
         }
 
         private void btnViewLogs_Click(object sender, EventArgs e)

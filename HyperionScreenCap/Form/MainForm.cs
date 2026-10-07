@@ -51,10 +51,6 @@ namespace HyperionScreenCap
             _uiThread = Thread.CurrentThread;
             SettingsManager.LoadSetttings();
 
-            if ( SettingsManager.CheckUpdateOnStartup )
-            {
-                UpdateChecker.StartUpdateCheck(true);
-            }
 
             _trayIcon = new NotifyIcon { Text = AppConstants.TrayIcon.TOOLTIP_CAPTURE_DISABLED };
             _trayIcon.DoubleClick += TrayIcon_DoubleClick;

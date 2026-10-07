@@ -49,7 +49,6 @@
             this.lblEnd = new System.Windows.Forms.Label();
             this.tbApiExcludeStart = new System.Windows.Forms.TextBox();
             this.lblStart = new System.Windows.Forms.Label();
-            this.chkCheckUpdate = new System.Windows.Forms.CheckBox();
             this.chkPauseSuspend = new System.Windows.Forms.CheckBox();
             this.chkPauseUserSwitch = new System.Windows.Forms.CheckBox();
             this.chkCaptureOnStartup = new System.Windows.Forms.CheckBox();
@@ -58,7 +57,6 @@
             this.cbNotificationLevel = new System.Windows.Forms.ComboBox();
             this.tabPageHelp = new System.Windows.Forms.TabPage();
             this.wbHelpContent = new System.Windows.Forms.WebBrowser();
-            this.btnCheckUpdates = new System.Windows.Forms.Button();
             this.btnViewLogs = new System.Windows.Forms.Button();
             this.btnSaveExit = new System.Windows.Forms.Button();
             this.lblVersion = new System.Windows.Forms.Label();
@@ -186,7 +184,6 @@
             this.tableLayoutPanel3.ColumnCount = 1;
             this.tableLayoutPanel3.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutPanel3.Controls.Add(this.panel1, 0, 5);
-            this.tableLayoutPanel3.Controls.Add(this.chkCheckUpdate, 0, 3);
             this.tableLayoutPanel3.Controls.Add(this.chkPauseSuspend, 0, 2);
             this.tableLayoutPanel3.Controls.Add(this.chkPauseUserSwitch, 0, 1);
             this.tableLayoutPanel3.Controls.Add(this.chkCaptureOnStartup, 0, 0);
@@ -329,17 +326,6 @@
             this.lblStart.TabIndex = 30;
             this.lblStart.Text = "Start:";
             // 
-            // chkCheckUpdate
-            // 
-            this.chkCheckUpdate.AutoSize = true;
-            this.chkCheckUpdate.Location = new System.Drawing.Point(4, 88);
-            this.chkCheckUpdate.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.chkCheckUpdate.Name = "chkCheckUpdate";
-            this.chkCheckUpdate.Size = new System.Drawing.Size(186, 20);
-            this.chkCheckUpdate.TabIndex = 14;
-            this.chkCheckUpdate.Text = "Check for Updates on Start";
-            this.chkCheckUpdate.UseVisualStyleBackColor = true;
-            // 
             // chkPauseSuspend
             // 
             this.chkPauseSuspend.AutoSize = true;
@@ -443,18 +429,6 @@
             this.wbHelpContent.TabIndex = 0;
             this.wbHelpContent.WebBrowserShortcutsEnabled = false;
             // 
-            // btnCheckUpdates
-            // 
-            this.btnCheckUpdates.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCheckUpdates.Location = new System.Drawing.Point(687, 420);
-            this.btnCheckUpdates.Margin = new System.Windows.Forms.Padding(1);
-            this.btnCheckUpdates.Name = "btnCheckUpdates";
-            this.btnCheckUpdates.Size = new System.Drawing.Size(160, 33);
-            this.btnCheckUpdates.TabIndex = 40;
-            this.btnCheckUpdates.Text = "Check for Updates";
-            this.btnCheckUpdates.UseVisualStyleBackColor = true;
-            this.btnCheckUpdates.Click += new System.EventHandler(this.btnCheckUpdates_Click);
-            // 
             // btnViewLogs
             // 
             this.btnViewLogs.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
@@ -555,7 +529,6 @@
             this.ClientSize = new System.Drawing.Size(1176, 460);
             this.Controls.Add(this.btnDonate);
             this.Controls.Add(this.btnViewLogs);
-            this.Controls.Add(this.btnCheckUpdates);
             this.Controls.Add(this.lblVersion);
             this.Controls.Add(this.btnSaveExit);
             this.Controls.Add(this.tabControl1);
@@ -607,8 +580,6 @@
         private System.Windows.Forms.CheckBox chkPauseSuspend;
         private System.Windows.Forms.CheckBox chkPauseUserSwitch;
         private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.CheckBox chkCheckUpdate;
-        private System.Windows.Forms.Button btnCheckUpdates;
         private System.Windows.Forms.Button btnViewLogs;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.DataGridView dgTaskConfig;

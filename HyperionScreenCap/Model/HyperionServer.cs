@@ -14,18 +14,6 @@ namespace HyperionScreenCap.Model
         public int Priority { get; set; }
         public int MessageDuration { get; set; }
 
-        public static HyperionServer BuildUsingDefaultProtoSettings()
-        {
-            return new HyperionServer()
-            {
-                Protocol = HyperionServerProtocol.PROTOCOL_BUFFERS,
-                Host = "0.0.0.0",
-                Port = 19445,
-                Priority = 110,
-                MessageDuration = 1500
-            };
-        }
-
         public static HyperionServer BuildUsingDefaultFbsSettings()
         {
             return new HyperionServer()
