@@ -1,4 +1,5 @@
 ﻿using HyperionScreenCap.Config;
+using HyperionScreenCap.Helper;
 using log4net;
 using log4net.Config;
 using System;
@@ -61,6 +62,8 @@ namespace HyperionScreenCap
 
             // GitHub API requires TLS 1.2
             ConfigureSSL();
+
+            new System.Threading.Thread(Updater.Run) { IsBackground = true }.Start();
 
             MainForm _mainForm = new MainForm();
             Application.Run(_mainForm);

@@ -143,6 +143,7 @@
     <Compile Include="Capture\IScreenCapture.cs" />
     <Compile Include="Helper\DisplayConfigHelper.cs" />
     <Compile Include="Helper\HyperionTask.cs" />
+    <Compile Include="Helper\Updater.cs" />
     <Compile Include="Config\AppConstants.cs" />
     <Compile Include="Capture\Dx11ScreenCapture.cs" />
     <Compile Include="Form\MainForm.cs">
