@@ -14,7 +14,7 @@ namespace HyperionScreenCap.Helper
         private static readonly ILog LOG = LogManager.GetLogger(typeof(Updater));
         private const string LATEST_RELEASE_URL = "https://api.github.com/repos/xDaryamo/HyperionScreenCap/releases/latest";
 
-        public static void Run()
+        public static void Run(NotificationUtils notifications)
         {
             string exe = Application.ExecutablePath;
             try
@@ -44,7 +44,7 @@ namespace HyperionScreenCap.Helper
                         File.Move(exe + ".old", exe);
                         throw;
                     }
-                    LOG.Info($"Version {latest} installed. It starts with the next launch.");
+                    notifications.Info($"Version {latest} installed. It starts with the next launch.");
                 }
             }
             catch ( Exception ex )

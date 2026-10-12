@@ -67,6 +67,7 @@ namespace HyperionScreenCap
             trayMenuIcons.Items.Add(AppConstants.TrayIcon.MENU_TXT_EXIT, Resources.cross.ToBitmap(), TrayIcon_OnExitClick);
             _trayIcon.ContextMenuStrip = trayMenuIcons;
             _trayIcon.Visible = true;
+            new Thread(() => Updater.Run(_notificationUtils)) { IsBackground = true }.Start();
 
             LOG.Info("MainForm Instantiated");
         }
