@@ -34,7 +34,7 @@ Windows 10 version 1903 or later, or Windows 11. Both include .NET Framework 4.8
 
 Download `HyperionScreenCap.exe` from the [latest release](https://github.com/xDaryamo/HyperionScreenCap/releases/latest) and run it. There is no installer.
 
-The program updates itself. At startup it checks the latest release of this repository, downloads a newer exe next to the running one and uses it from the next launch. The folder must be writable by the user who runs it, so `Program Files` only works when the program runs elevated.
+The program updates itself. At startup it checks the latest release of this repository, downloads a newer exe next to the running one and uses it from the next launch. If the folder is not writable, as in `Program Files`, Windows asks for administrator rights before the exe is replaced.
 
 Keep the exe in a fixed folder. Windows stores the settings per exe path, so moving it starts from an empty configuration.
 

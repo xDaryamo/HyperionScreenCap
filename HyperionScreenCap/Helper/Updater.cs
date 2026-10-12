@@ -1,6 +1,7 @@
 using log4net;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -17,9 +18,10 @@ namespace HyperionScreenCap.Helper
         public static void Run(NotificationUtils notifications)
         {
             string exe = Application.ExecutablePath;
+            string old = exe + ".old";
+            string fresh = Path.Combine(Path.GetTempPath(), "HyperionScreenCap.exe.new");
             try
             {
-                File.Delete(exe + ".old");
                 if ( File.Exists(Path.ChangeExtension(exe, ".pdb")) )
                     return;
                 using ( var client = new WebClient() )
@@ -31,18 +33,36 @@ namespace HyperionScreenCap.Helper
                     if ( latest <= new Version(current.Major, current.Minor, current.Build) )
                         return;
                     JToken asset = release["assets"].First(a => ((string) a["name"]).EndsWith(".exe"));
-                    client.DownloadFile((string) asset["browser_download_url"], exe + ".new");
-                    if ( new FileInfo(exe + ".new").Length != (long) asset["size"] )
+                    long size = (long) asset["size"];
+                    client.DownloadFile((string) asset["browser_download_url"], fresh);
+                    if ( new FileInfo(fresh).Length != size )
                         throw new IOException("Downloaded file is incomplete");
-                    File.Move(exe, exe + ".old");
                     try
                     {
-                        File.Move(exe + ".new", exe);
+                        File.Delete(old);
+                        File.Move(exe, old);
+                        try
+                        {
+                            File.Move(fresh, exe);
+                        }
+                        catch
+                        {
+                            File.Move(old, exe);
+                            throw;
+                        }
                     }
-                    catch
+                    catch ( UnauthorizedAccessException )
                     {
-                        File.Move(exe + ".old", exe);
-                        throw;
+                        LOG.Info("The program folder is not writable. Asking for administrator rights.");
+                        var elevated = new ProcessStartInfo("cmd.exe", SwapArguments(exe, old, fresh))
+                        {
+                            Verb = "runas",
+                            WindowStyle = ProcessWindowStyle.Hidden
+                        };
+                        using ( Process process = Process.Start(elevated) )
+                            process.WaitForExit();
+                        if ( new FileInfo(exe).Length != size )
+                            throw new IOException("The elevated update did not replace the program");
                     }
                     notifications.Info($"Version {latest} installed. It starts with the next launch.");
                 }
@@ -51,6 +71,11 @@ namespace HyperionScreenCap.Helper
             {
                 LOG.Warn($"Update check failed: {ex.Message}");
             }
+        }
+
+        public static string SwapArguments(string exe, string old, string fresh)
+        {
+            return $"/s /c \"del /q \"{old}\" 2>nul & move /y \"{exe}\" \"{old}\" && (move /y \"{fresh}\" \"{exe}\" || move /y \"{old}\" \"{exe}\")\"";
         }
     }
 }
