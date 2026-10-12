@@ -31,7 +31,7 @@ namespace HyperionScreenCap
 
             var helpHtml = Markdown.ToHtml(Resources.SetupFormHelp);
             wbHelpContent.DocumentText = helpHtml;
-            lblVersion.Text = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            lblVersion.Text = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
             btnDonate.Text = AppConstants.TrayIcon.MENU_TXT_DONATE;
             LOG.Info("SetupForm Instantiated");
         }
